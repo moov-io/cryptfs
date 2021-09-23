@@ -40,3 +40,19 @@ func TestCryptorAES(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(dec2))
 }
+
+func TestCryptorAESError(t *testing.T) {
+	cc := &AESCryptor{key: []byte("1")} // invalid Key
+
+	enc, err := cc.Encrypt(nil)
+	require.Empty(t, enc)
+	require.NotNil(t, err)
+
+	// decrypt invalid data
+	cc, err = NewAESCryptor([]byte(strings.Repeat("1", 16)))
+	require.NoError(t, err)
+
+	plain, err := cc.Decrypt([]byte("invalid"))
+	require.Empty(t, plain)
+	require.NotNil(t, err)
+}

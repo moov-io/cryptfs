@@ -13,3 +13,19 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+/bin/
+misspell*
+staticcheck*
+lint-project.sh
+
+.vscode/launch.json
+
+# code coverage
+coverage.html
+cover.out
+coverage.txt
+
+*.pyc
+
+.idea/*

@@ -27,6 +27,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCryptfsEmpty(t *testing.T) {
+	fsys, err := New(nil, nil)
+	require.Nil(t, fsys)
+	require.NotNil(t, err)
+
+	crypt, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
+	require.NoError(t, err)
+
+	fsys, err = New(crypt, nil)
+	require.Nil(t, fsys)
+	require.NotNil(t, err)
+}
+
 func TestCryptfsAES(t *testing.T) {
 	key := []byte(strings.Repeat("1", 16))
 	cc, err := NewAESCryptor(key)
@@ -60,4 +73,23 @@ func testCryptfs(t *testing.T, cryptor Cryptor) {
 	bs, err = filesys.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(bs))
+}
+
+func TestCryptfsError(t *testing.T) {
+	parent := t.TempDir()
+
+	cc, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
+	require.NoError(t, err)
+
+	filesys, err := New(cc, Base64())
+	require.NoError(t, err)
+
+	badPath := filepath.Join(parent, "missing", "file.txt")
+
+	file, err := filesys.ReadFile(badPath)
+	require.Nil(t, file)
+	require.ErrorIs(t, err, os.ErrNotExist)
+
+	err = filesys.WriteFile(badPath, []byte("data"), 0600)
+	require.ErrorIs(t, err, os.ErrNotExist)
 }
