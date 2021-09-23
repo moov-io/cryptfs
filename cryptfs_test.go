@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package cryptofs
+package cryptfs
 
 import (
 	"io/ioutil"
@@ -38,7 +38,8 @@ func testCryptfs(t *testing.T, cryptor Cryptor) {
 	t.Helper()
 
 	parent := t.TempDir()
-	filesys := New(cryptor, Base64())
+	filesys, err := New(cryptor, Base64())
+	require.NoError(t, err)
 
 	// Verify error when file isn't there
 	file, err := filesys.Open(filepath.Join(parent, "foo.txt"))

@@ -18,28 +18,20 @@
 package cryptfs
 
 import (
-	"encoding/base64"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type Coder interface {
-	Encode(data []byte) ([]byte, error)
-	Decode(data []byte) ([]byte, error)
-}
+func TestCoder__Base64(t *testing.T) {
+	data := []byte("hello, world")
+	cc := Base64()
 
-type base64Coder struct{}
+	encoded, err := cc.Encode(data)
+	require.NoError(t, err)
 
-func Base64() Coder {
-	return &base64Coder{}
-}
+	plain, err := cc.Decode(encoded)
+	require.NoError(t, err)
 
-func (c *base64Coder) Encode(data []byte) ([]byte, error) {
-	ebuf := make([]byte, base64.RawStdEncoding.EncodedLen(len(data)))
-	base64.RawStdEncoding.Encode(ebuf, data)
-	return ebuf, nil
-}
-
-func (c *base64Coder) Decode(data []byte) ([]byte, error) {
-	dbuf := make([]byte, base64.RawStdEncoding.DecodedLen(len(data)))
-	base64.RawStdEncoding.Decode(dbuf, data)
-	return dbuf, nil
+	require.Equal(t, data, plain)
 }

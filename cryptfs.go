@@ -15,9 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package cryptofs
+package cryptfs
 
 import (
+	"errors"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -28,11 +29,17 @@ type FS struct {
 	coder   Coder
 }
 
-func New(cryptor Cryptor, coder Coder) *FS {
+func New(cryptor Cryptor, coder Coder) (*FS, error) {
+	if cryptor == nil {
+		return nil, errors.New("nil Cryptor")
+	}
+	if coder == nil {
+		return nil, errors.New("nil Coder")
+	}
 	return &FS{
 		cryptor: cryptor,
 		coder:   coder,
-	}
+	}, nil
 }
 
 func (fsys *FS) Open(name string) (fs.File, error) {
@@ -40,11 +47,15 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 }
 
 func (fsys *FS) ReadFile(name string) ([]byte, error) {
-	encrypted, err := ioutil.ReadFile(name)
+	encodedBytes, err := ioutil.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
-	plain, err := fsys.cryptor.Decrypt(encrypted)
+	decodedBytes, err := fsys.coder.Decode(encodedBytes)
+	if err != nil {
+		return nil, err
+	}
+	plain, err := fsys.cryptor.Decrypt(decodedBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -52,11 +63,15 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 }
 
 func (fsys *FS) WriteFile(filename string, plaintext []byte, perm fs.FileMode) error {
-	encrypted, err := fsys.cryptor.Encrypt(plaintext)
+	encryptedBytes, err := fsys.cryptor.Encrypt(plaintext)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, encrypted, perm)
+	encodedBytes, err := fsys.coder.Encode(encryptedBytes)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, encodedBytes, perm)
 }
 
 var _ fs.FS = (&FS{})

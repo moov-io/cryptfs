@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package cryptofs
+package cryptfs
 
 type Cryptor interface {
 	Encrypt(data []byte) ([]byte, error)
