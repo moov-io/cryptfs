@@ -29,6 +29,9 @@ type AESCryptor struct {
 	key []byte
 }
 
+// NewAESCryptor returns an Cryptor which performs AES encryption/decryption.
+//
+// The key must be 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256.
 func NewAESCryptor(key []byte) (*AESCryptor, error) {
 	return &AESCryptor{key: key}, nil
 }
