@@ -23,6 +23,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestCoder__Nothing(t *testing.T) {
+	data := []byte("hello, world")
+	cc := NoEncoding()
+
+	encoded, err := cc.Encode(data)
+	require.NoError(t, err)
+	require.Equal(t, data, encoded)
+
+	plain, err := cc.Decode(encoded)
+	require.NoError(t, err)
+	require.Equal(t, data, plain)
+}
+
 func TestCoder__Base64(t *testing.T) {
 	data := []byte("hello, world")
 	cc := Base64()

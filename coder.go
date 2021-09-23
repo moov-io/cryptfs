@@ -26,6 +26,20 @@ type Coder interface {
 	Decode(data []byte) ([]byte, error)
 }
 
+type nothingCoder struct{}
+
+func NoEncoding() Coder {
+	return &nothingCoder{}
+}
+
+func (*nothingCoder) Encode(data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func (*nothingCoder) Decode(data []byte) ([]byte, error) {
+	return data, nil
+}
+
 type base64Coder struct{}
 
 func Base64() Coder {
