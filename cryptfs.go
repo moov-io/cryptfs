@@ -29,6 +29,8 @@ type FS struct {
 	coder   Coder
 }
 
+// New returns a FS instance with the specified Cryptor and Coder
+// used for all operations.
 func New(cryptor Cryptor, coder Coder) (*FS, error) {
 	if cryptor == nil {
 		return nil, errors.New("nil Cryptor")
@@ -46,6 +48,7 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	return os.Open(name)
 }
 
+// ReadFile will attempt to open, decode, and decrypt a file.
 func (fsys *FS) ReadFile(name string) ([]byte, error) {
 	encodedBytes, err := ioutil.ReadFile(name)
 	if err != nil {
@@ -62,7 +65,8 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 	return plain, nil
 }
 
-func (fsys *FS) WriteFile(filename string, plaintext []byte, perm fs.FileMode) error {
+// WriteFile will attempt to encrypt, encode, and create a file under the given filepath.
+func (fsys *FS) WriteFile(filepath string, plaintext []byte, perm fs.FileMode) error {
 	encryptedBytes, err := fsys.cryptor.Encrypt(plaintext)
 	if err != nil {
 		return err
@@ -71,7 +75,7 @@ func (fsys *FS) WriteFile(filename string, plaintext []byte, perm fs.FileMode) e
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filename, encodedBytes, perm)
+	return ioutil.WriteFile(filepath, encodedBytes, perm)
 }
 
 var _ fs.FS = (&FS{})

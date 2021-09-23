@@ -21,16 +21,19 @@ import (
 	"encoding/base64"
 )
 
+// Coder is an interface describing two operations which transform data into
+// another format. This can be done to compress or disfigure bytes.
 type Coder interface {
 	Encode(data []byte) ([]byte, error)
 	Decode(data []byte) ([]byte, error)
 }
 
-type nothingCoder struct{}
-
+// NoEncoding is a Coder which does not transform data.
 func NoEncoding() Coder {
 	return &nothingCoder{}
 }
+
+type nothingCoder struct{}
 
 func (*nothingCoder) Encode(data []byte) ([]byte, error) {
 	return data, nil
@@ -40,11 +43,13 @@ func (*nothingCoder) Decode(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-type base64Coder struct{}
-
+// Base64 is a Coder which transforms data following RFC 4648 section 3.2.
+// There are no padding characters added or accepted by this Coder.
 func Base64() Coder {
 	return &base64Coder{}
 }
+
+type base64Coder struct{}
 
 func (c *base64Coder) Encode(data []byte) ([]byte, error) {
 	ebuf := make([]byte, base64.RawStdEncoding.EncodedLen(len(data)))
