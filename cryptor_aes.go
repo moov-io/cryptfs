@@ -26,22 +26,22 @@ import (
 )
 
 type AESCryptor struct {
-	key []byte
+	cphr cipher.Block
 }
 
 // NewAESCryptor returns an Cryptor which performs AES encryption/decryption.
 //
 // The key must be 16, 24, or 32 bytes to select AES-128, AES-192, or AES-256.
 func NewAESCryptor(key []byte) (*AESCryptor, error) {
-	return &AESCryptor{key: key}, nil
-}
-
-func (c *AESCryptor) Encrypt(data []byte) ([]byte, error) {
-	cphr, err := aes.NewCipher([]byte(c.key))
+	cphr, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
 	}
-	gcm, err := cipher.NewGCM(cphr)
+	return &AESCryptor{cphr: cphr}, nil
+}
+
+func (c *AESCryptor) Encrypt(data []byte) ([]byte, error) {
+	gcm, err := cipher.NewGCM(c.cphr)
 	if err != nil {
 		return nil, err
 	}
@@ -54,11 +54,7 @@ func (c *AESCryptor) Encrypt(data []byte) ([]byte, error) {
 }
 
 func (c *AESCryptor) Decrypt(ciphertext []byte) ([]byte, error) {
-	cphr, err := aes.NewCipher([]byte(c.key))
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(cphr)
+	gcm, err := cipher.NewGCM(c.cphr)
 	if err != nil {
 		return nil, err
 	}

@@ -43,7 +43,7 @@ func BenchmarkCryptfs__AES(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// Write a file and read it back
-		filename, data := setup(b, parent)
+		filename, data := setup(parent)
 
 		err := filesys.WriteFile(filename, data, 0600)
 		require.NoError(b, err)
@@ -54,9 +54,7 @@ func BenchmarkCryptfs__AES(b *testing.B) {
 	}
 }
 
-func setup(b *testing.B, parent string) (string, []byte) {
-	b.Helper()
-
+func setup(parent string) (string, []byte) {
 	filename := filepath.Join(parent, fmt.Sprintf("%s.txt", randString(12)))
 	return filename, []byte(randString(100))
 }

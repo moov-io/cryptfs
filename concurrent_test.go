@@ -18,39 +18,42 @@
 package cryptfs
 
 import (
-	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestCryptorAES(t *testing.T) {
-	cc, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
+func TestConcurrency__AES(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping concurrency test due to -short")
+	}
+
+	cc, err := NewAESCryptor([]byte("1234567812345678"))
 	require.NoError(t, err)
 
-	enc, err := cc.Encrypt([]byte("hello, world"))
-	require.NoError(t, err)
-	require.Greater(t, len(enc), 0)
-
-	dec1, err := cc.Decrypt(enc)
-	require.NoError(t, err)
-	require.Equal(t, "hello, world", string(dec1))
-
-	dec2, err := cc.Decrypt(enc)
-	require.NoError(t, err)
-	require.Equal(t, "hello, world", string(dec2))
-}
-
-func TestCryptorAESError(t *testing.T) {
-	cc, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
+	parent := t.TempDir()
+	filesys, err := New(cc, Base64())
 	require.NoError(t, err)
 
-	enc, err := cc.Encrypt(nil)
-	require.NotEmpty(t, enc)
-	require.NoError(t, err)
+	trials := 1000
 
-	// decrypt invalid data
-	plain, err := cc.Decrypt([]byte("invalid"))
-	require.Empty(t, plain)
-	require.NotNil(t, err)
+	var wg sync.WaitGroup
+	wg.Add(trials)
+	for i := 0; i < trials; i++ {
+		go func() {
+			defer wg.Done()
+
+			// Write a file and read it back
+			filename, data := setup(parent)
+
+			err := filesys.WriteFile(filename, data, 0600)
+			require.NoError(t, err)
+
+			plain, err := filesys.ReadFile(filename)
+			require.NoError(t, err)
+			require.Equal(t, data, plain)
+		}()
+	}
+	wg.Wait()
 }
