@@ -65,7 +65,7 @@ func randString(length int) string {
 	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	out := make([]rune, length)
 	for i := range out {
-		out[i] = letters[rand.Intn(len(letters))]
+		out[i] = letters[rand.Intn(len(letters))] //nolint:gosec
 	}
 	return string(out)
 }
