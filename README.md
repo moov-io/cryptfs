@@ -40,15 +40,14 @@ cryptfs is being included in multiple open-source projects Moov offers and is us
 Currently cryptfs is usable as a Go library in your applications. This needs to be initialized prior to reading or writing any files.
 
 ```go
-enc, err := cryptfs.NewAESCryptor([]byte("1234567812345678")) // insecure key
+key := []byte("1234567812345678")) // insecure key
+
+fsys, err := cryptfs.FromCryptor(cryptfs.NewAESCryptor(key))
 if err != nil {
     // do something
 }
 
-fsys, err := cryptfs.New(enc, cryptfs.Base64())
-if err != nil {
-    // do something
-}
+fsys.SetCoder(cryptfs.Base64()) // optional, default is the raw bytes
 ```
 
 Once initialized you can perform open/read and write operations.

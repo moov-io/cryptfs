@@ -36,8 +36,9 @@ func BenchmarkCryptfs__AES(b *testing.B) {
 	require.NoError(b, err)
 
 	parent := b.TempDir()
-	filesys, err := New(cc, Base64())
+	filesys, err := New(cc)
 	require.NoError(b, err)
+	filesys.SetCoder(Base64())
 
 	b.ResetTimer()
 

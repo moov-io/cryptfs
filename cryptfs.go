@@ -29,19 +29,30 @@ type FS struct {
 	coder   Coder
 }
 
-// New returns a FS instance with the specified Cryptor and Coder
-// used for all operations.
-func New(cryptor Cryptor, coder Coder) (*FS, error) {
+// New returns a FS instance with the specified Cryptor used for all operations.
+func New(cryptor Cryptor) (*FS, error) {
 	if cryptor == nil {
 		return nil, errors.New("nil Cryptor")
 	}
-	if coder == nil {
-		return nil, errors.New("nil Coder")
-	}
 	return &FS{
 		cryptor: cryptor,
-		coder:   coder,
+		coder:   NoEncoding(),
 	}, nil
+}
+
+// FromCryptor returns an FS instance and allows passing the results of creating a
+// Cryptor directly as the arguments.
+func FromCryptor(cryptor Cryptor, err error) (*FS, error) {
+	if err != nil {
+		return nil, err
+	}
+	return New(cryptor)
+}
+
+func (fsys *FS) SetCoder(coder Coder) {
+	if fsys != nil && coder != nil {
+		fsys.coder = coder
+	}
 }
 
 func (fsys *FS) Open(name string) (fs.File, error) {

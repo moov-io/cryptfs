@@ -28,16 +28,20 @@ import (
 )
 
 func TestCryptfsEmpty(t *testing.T) {
-	fsys, err := New(nil, nil)
+	fsys, err := New(nil)
+	require.Nil(t, fsys)
+	require.NotNil(t, err)
+
+	fsys, err = FromCryptor(nil, nil)
 	require.Nil(t, fsys)
 	require.NotNil(t, err)
 
 	crypt, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
 	require.NoError(t, err)
 
-	fsys, err = New(crypt, nil)
-	require.Nil(t, fsys)
-	require.NotNil(t, err)
+	fsys, err = New(crypt)
+	require.NotNil(t, fsys)
+	require.NoError(t, err)
 }
 
 func TestCryptfsAES(t *testing.T) {
@@ -51,8 +55,9 @@ func testCryptfs(t *testing.T, cryptor Cryptor) {
 	t.Helper()
 
 	parent := t.TempDir()
-	filesys, err := New(cryptor, Base64())
+	filesys, err := New(cryptor)
 	require.NoError(t, err)
+	filesys.SetCoder(Base64())
 
 	// Verify error when file isn't there
 	file, err := filesys.Open(filepath.Join(parent, "foo.txt"))
@@ -81,8 +86,9 @@ func TestCryptfsError(t *testing.T) {
 	cc, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
 	require.NoError(t, err)
 
-	filesys, err := New(cc, Base64())
+	filesys, err := New(cc)
 	require.NoError(t, err)
+	filesys.SetCoder(Base64())
 
 	badPath := filepath.Join(parent, "missing", "file.txt")
 

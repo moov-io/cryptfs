@@ -33,8 +33,9 @@ func TestConcurrency__AES(t *testing.T) {
 	require.NoError(t, err)
 
 	parent := t.TempDir()
-	filesys, err := New(cc, Base64())
+	filesys, err := New(cc)
 	require.NoError(t, err)
+	filesys.SetCoder(Base64())
 
 	trials := 1000
 
