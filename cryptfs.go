@@ -59,12 +59,8 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	return os.Open(name)
 }
 
-// ReadFile will attempt to open, decode, and decrypt a file.
-func (fsys *FS) ReadFile(name string) ([]byte, error) {
-	encodedBytes, err := ioutil.ReadFile(name)
-	if err != nil {
-		return nil, err
-	}
+// Reveal will decode and then decrypt the bytes its given
+func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
 	decodedBytes, err := fsys.coder.Decode(encodedBytes)
 	if err != nil {
 		return nil, err
@@ -76,13 +72,30 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 	return plain, nil
 }
 
-// WriteFile will attempt to encrypt, encode, and create a file under the given filepath.
-func (fsys *FS) WriteFile(filepath string, plaintext []byte, perm fs.FileMode) error {
+// ReadFile will attempt to open, decode, and decrypt a file.
+func (fsys *FS) ReadFile(name string) ([]byte, error) {
+	encodedBytes, err := ioutil.ReadFile(name)
+	if err != nil {
+		return nil, err
+	}
+	return fsys.Reveal(encodedBytes)
+}
+
+func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
 	encryptedBytes, err := fsys.cryptor.Encrypt(plaintext)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	encodedBytes, err := fsys.coder.Encode(encryptedBytes)
+	if err != nil {
+		return nil, err
+	}
+	return encodedBytes, nil
+}
+
+// WriteFile will attempt to encrypt, encode, and create a file under the given filepath.
+func (fsys *FS) WriteFile(filepath string, plaintext []byte, perm fs.FileMode) error {
+	encodedBytes, err := fsys.Disfigure(plaintext)
 	if err != nil {
 		return err
 	}
