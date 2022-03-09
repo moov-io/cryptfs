@@ -76,6 +76,10 @@ if err != nil {
 }
 ```
 
+## Command Line
+
+Moov offers a [command line tool](./cmd/cryptfs) for using this library as well. It's handy for operational debugging and testing.
+
 ## Getting help
 
  channel | info
