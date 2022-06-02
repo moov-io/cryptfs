@@ -28,15 +28,15 @@ func TestCryptorAES(t *testing.T) {
 	cc, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
 	require.NoError(t, err)
 
-	enc, err := cc.Encrypt([]byte("hello, world"))
+	enc, err := cc.encrypt([]byte("hello, world"))
 	require.NoError(t, err)
 	require.Greater(t, len(enc), 0)
 
-	dec1, err := cc.Decrypt(enc)
+	dec1, err := cc.decrypt(enc)
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(dec1))
 
-	dec2, err := cc.Decrypt(enc)
+	dec2, err := cc.decrypt(enc)
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(dec2))
 }
@@ -45,12 +45,12 @@ func TestCryptorAESError(t *testing.T) {
 	cc, err := NewAESCryptor([]byte(strings.Repeat("1", 16)))
 	require.NoError(t, err)
 
-	enc, err := cc.Encrypt(nil)
+	enc, err := cc.encrypt(nil)
 	require.NotEmpty(t, enc)
 	require.NoError(t, err)
 
 	// decrypt invalid data
-	plain, err := cc.Decrypt([]byte("invalid"))
+	plain, err := cc.decrypt([]byte("invalid"))
 	require.Empty(t, plain)
 	require.NotNil(t, err)
 }

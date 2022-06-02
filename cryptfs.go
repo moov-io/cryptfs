@@ -61,11 +61,11 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 
 // Reveal will decode and then decrypt the bytes its given
 func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
-	decodedBytes, err := fsys.coder.Decode(encodedBytes)
+	decodedBytes, err := fsys.coder.decode(encodedBytes)
 	if err != nil {
 		return nil, err
 	}
-	plain, err := fsys.cryptor.Decrypt(decodedBytes)
+	plain, err := fsys.cryptor.decrypt(decodedBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +82,11 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 }
 
 func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
-	encryptedBytes, err := fsys.cryptor.Encrypt(plaintext)
+	encryptedBytes, err := fsys.cryptor.encrypt(plaintext)
 	if err != nil {
 		return nil, err
 	}
-	encodedBytes, err := fsys.coder.Encode(encryptedBytes)
+	encodedBytes, err := fsys.coder.encode(encryptedBytes)
 	if err != nil {
 		return nil, err
 	}

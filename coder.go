@@ -24,8 +24,8 @@ import (
 // Coder is an interface describing two operations which transform data into
 // another format. This can be done to compress or disfigure bytes.
 type Coder interface {
-	Encode(data []byte) ([]byte, error)
-	Decode(data []byte) ([]byte, error)
+	encode(data []byte) ([]byte, error)
+	decode(data []byte) ([]byte, error)
 }
 
 // NoEncoding is a Coder which does not transform data.
@@ -35,11 +35,11 @@ func NoEncoding() Coder {
 
 type nothingCoder struct{}
 
-func (*nothingCoder) Encode(data []byte) ([]byte, error) {
+func (*nothingCoder) encode(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (*nothingCoder) Decode(data []byte) ([]byte, error) {
+func (*nothingCoder) decode(data []byte) ([]byte, error) {
 	return data, nil
 }
 
@@ -51,13 +51,13 @@ func Base64() Coder {
 
 type base64Coder struct{}
 
-func (c *base64Coder) Encode(data []byte) ([]byte, error) {
+func (c *base64Coder) encode(data []byte) ([]byte, error) {
 	ebuf := make([]byte, base64.RawStdEncoding.EncodedLen(len(data)))
 	base64.RawStdEncoding.Encode(ebuf, data)
 	return ebuf, nil
 }
 
-func (c *base64Coder) Decode(data []byte) ([]byte, error) {
+func (c *base64Coder) decode(data []byte) ([]byte, error) {
 	dbuf := make([]byte, base64.RawStdEncoding.DecodedLen(len(data)))
 	base64.RawStdEncoding.Decode(dbuf, data)
 	return dbuf, nil

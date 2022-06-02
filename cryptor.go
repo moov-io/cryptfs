@@ -18,6 +18,6 @@
 package cryptfs
 
 type Cryptor interface {
-	Encrypt(data []byte) ([]byte, error)
-	Decrypt(data []byte) ([]byte, error)
+	encrypt(data []byte) ([]byte, error)
+	decrypt(data []byte) ([]byte, error)
 }

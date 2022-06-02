@@ -40,7 +40,7 @@ func NewAESCryptor(key []byte) (*AESCryptor, error) {
 	return &AESCryptor{cphr: cphr}, nil
 }
 
-func (c *AESCryptor) Encrypt(data []byte) ([]byte, error) {
+func (c *AESCryptor) encrypt(data []byte) ([]byte, error) {
 	gcm, err := cipher.NewGCM(c.cphr)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (c *AESCryptor) Encrypt(data []byte) ([]byte, error) {
 	return out, nil
 }
 
-func (c *AESCryptor) Decrypt(ciphertext []byte) ([]byte, error) {
+func (c *AESCryptor) decrypt(ciphertext []byte) ([]byte, error) {
 	gcm, err := cipher.NewGCM(c.cphr)
 	if err != nil {
 		return nil, err
