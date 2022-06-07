@@ -1,3 +1,13 @@
+## v0.4.0 (Released 2022-06-07)
+
+ADDITIONS
+
+- Add GPG Cryptor that can encrypt and decrypt messages
+
+BUILD
+
+- fix(deps): update module github.com/stretchr/testify to v1.7.2
+
 ## v0.3.0 (Released 2022-06-02)
 
 We've noticed that new users to this library can use the `Coder` and `Cryptor` methods these incorrectly.
