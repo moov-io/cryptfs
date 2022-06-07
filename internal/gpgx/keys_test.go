@@ -5,7 +5,9 @@
 package gpgx
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -31,11 +33,40 @@ func TestGPG(t *testing.T) {
 	// Decrypt
 	privKey, err := ReadPrivateKeyFile(privateKeyPath, password)
 	require.NoError(t, err)
-	require.NoError(t, err)
 	out, err := Decrypt(msg, privKey)
 	require.NoError(t, err)
+	require.Equal(t, "hello, world", string(out))
 
-	if v := string(out); v != "hello, world" {
-		t.Errorf("got %q", v)
-	}
+	// Decrypt
+	fd, err := os.Open(privateKeyPath)
+	require.NoError(t, err)
+	privKey, err = ReadPrivateKey(fd, password)
+	require.NoError(t, err)
+	out, err = Decrypt(msg, privKey)
+	require.NoError(t, err)
+	require.Equal(t, "hello, world", string(out))
+}
+
+func TestGPGError(t *testing.T) {
+	el, err := ReadArmoredKey(strings.NewReader("invalid"))
+	require.Error(t, err)
+	require.Empty(t, el)
+
+	el, err = ReadArmoredKeyFile("invalid-path")
+	require.Error(t, err)
+	require.Empty(t, el)
+
+	el, err = ReadPrivateKey(strings.NewReader("invalid"), []byte("password"))
+	require.Error(t, err)
+	require.Empty(t, el)
+
+	el, err = ReadPrivateKeyFile("invalid-path", []byte("password"))
+	require.Error(t, err)
+	require.Empty(t, el)
+}
+
+func TestGPG__readMessageError(t *testing.T) {
+	bs, err := readMessage([]byte("invalid"), nil)
+	require.Error(t, err)
+	require.Empty(t, bs)
 }

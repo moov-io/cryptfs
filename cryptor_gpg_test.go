@@ -18,6 +18,7 @@
 package cryptfs
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -41,6 +42,22 @@ func TestCryptorGPG(t *testing.T) {
 	dec2, err := dd.decrypt(enc)
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(dec2))
+}
+
+func TestCryptorGPG2(t *testing.T) {
+	dir := filepath.Join("internal", "gpgx", "testdata")
+
+	pubKey, err := os.Open(filepath.Join(dir, "key.pub"))
+	require.NoError(t, err)
+	cc, err := NewGPGEncryptor(pubKey)
+	require.NoError(t, err)
+	require.NotNil(t, cc)
+
+	privKey, err := os.Open(filepath.Join(dir, "key.priv"))
+	require.NoError(t, err)
+	cc, err = NewGPGDecryptor(privKey, []byte("password"))
+	require.NoError(t, err)
+	require.NotNil(t, cc)
 }
 
 func TestCryptorGPGError(t *testing.T) {
