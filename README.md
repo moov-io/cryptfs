@@ -33,11 +33,11 @@ cryptfs implements Go's [`io/fs.FS`](https://pkg.go.dev/io/fs#FS) interface for 
 
 ## Project Status
 
-cryptfs is being included in multiple open-source projects Moov offers and is used in production environments. Please star the project if you are interested in its progress. If you find any bugs or desire additional encryption/encoding algorithms we would appreciate an issue or pull request. Thanks!
+cryptfs is included in multiple open-source projects Moov offers and is used in production environments. Please star the project if you are interested in its progress. If you find any bugs or desire additional encryption/encoding algorithms we would appreciate an issue or pull request. Thanks!
 
 ## Usage
 
-Currently cryptfs is usable as a Go library in your applications. This needs to be initialized prior to reading or writing any files.
+Cryptfs supports AES and GPG for encryption and Base64 (Standard Raw) encoding. Currently cryptfs is usable as a Go library in your applications. This needs to be initialized prior to reading or writing any files.
 
 ```go
 key := []byte("1234567812345678")) // insecure key

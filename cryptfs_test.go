@@ -51,6 +51,17 @@ func TestCryptfsAES(t *testing.T) {
 	testCryptfs(t, cc)
 }
 
+func TestCryptGPG(t *testing.T) {
+	dir := filepath.Join("internal", "gpgx", "testdata")
+	cc, err := NewGPGCryptorFile(
+		filepath.Join(dir, "key.pub"),
+		filepath.Join(dir, "key.priv"),
+		[]byte("password"),
+	)
+	require.NoError(t, err)
+	testCryptfs(t, cc)
+}
+
 func testCryptfs(t *testing.T, cryptor Cryptor) {
 	t.Helper()
 
