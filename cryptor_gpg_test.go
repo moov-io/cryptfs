@@ -55,7 +55,7 @@ func TestCryptorGPGError(t *testing.T) {
 
 	dd, err := NewGPGDecryptorFile("invalid-path", []byte("password"))
 	require.Error(t, err)
-	require.Nil(t, ee)
+	require.Nil(t, dd)
 
 	dd = &GPGCryptor{}
 	bs, err = dd.decrypt([]byte("hello, world"))

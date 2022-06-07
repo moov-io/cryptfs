@@ -39,6 +39,9 @@ cryptfs is included in multiple open-source projects Moov offers and is used in 
 
 Cryptfs supports AES and GPG for encryption and Base64 (Standard Raw) encoding. Currently cryptfs is usable as a Go library in your applications. This needs to be initialized prior to reading or writing any files.
 
+<details>
+<summary>AES Cryptor</summary>
+
 ```go
 key := []byte("1234567812345678")) // insecure key
 
@@ -49,6 +52,22 @@ if err != nil {
 
 fsys.SetCoder(cryptfs.Base64()) // optional, default is the raw bytes
 ```
+
+</details>
+
+<details>
+<summary>GPG Cryptor</summary>
+
+```go
+fsys, err := cryptfs.FromCryptor(cryptfs.NewGPGCryptorFile(publicKeyPath, privateKeyPath, password))
+if err != nil {
+    // do something
+}
+
+fsys.SetCoder(cryptfs.Base64()) // optional, default is the raw bytes
+```
+
+</details>
 
 Once initialized you can perform open/read and write operations.
 
