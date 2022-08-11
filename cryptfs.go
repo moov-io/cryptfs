@@ -20,7 +20,6 @@ package cryptfs
 import (
 	"errors"
 	"io/fs"
-	"io/ioutil"
 	"os"
 )
 
@@ -74,7 +73,7 @@ func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
 
 // ReadFile will attempt to open, decode, and decrypt a file.
 func (fsys *FS) ReadFile(name string) ([]byte, error) {
-	encodedBytes, err := ioutil.ReadFile(name)
+	encodedBytes, err := os.ReadFile(name)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +98,7 @@ func (fsys *FS) WriteFile(filepath string, plaintext []byte, perm fs.FileMode) e
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filepath, encodedBytes, perm)
+	return os.WriteFile(filepath, encodedBytes, perm)
 }
 
 var _ fs.FS = (&FS{})
