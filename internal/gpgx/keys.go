@@ -9,7 +9,6 @@ import (
 	"crypto"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
@@ -147,7 +146,7 @@ func readMessage(armoredMessage []byte, keys openpgp.EntityList) ([]byte, error)
 		}
 	}
 
-	bytes, err := ioutil.ReadAll(md.UnverifiedBody)
+	bytes, err := io.ReadAll(md.UnverifiedBody)
 	if err != nil {
 		return nil, err
 	}

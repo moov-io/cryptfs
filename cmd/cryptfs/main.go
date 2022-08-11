@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -141,7 +140,7 @@ func setupCryptfs() (*cryptfs.FS, error) {
 }
 
 func decrypt(cc *cryptfs.FS) ([]byte, error) {
-	raw, err := ioutil.ReadFile(*flagDecrypt)
+	raw, err := os.ReadFile(*flagDecrypt)
 	if err != nil {
 		return nil, fmt.Errorf("opening %s -- %v", *flagDecrypt, err)
 	}
@@ -149,7 +148,7 @@ func decrypt(cc *cryptfs.FS) ([]byte, error) {
 }
 
 func encrypt(cc *cryptfs.FS) ([]byte, error) {
-	raw, err := ioutil.ReadFile(*flagEncrypt)
+	raw, err := os.ReadFile(*flagEncrypt)
 	if err != nil {
 		return nil, fmt.Errorf("opening %s -- %v", *flagEncrypt, err)
 	}

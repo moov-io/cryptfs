@@ -18,7 +18,6 @@
 package cryptfs
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,7 +95,7 @@ func testCryptfs(t *testing.T, cryptor Cryptor) {
 	require.NoError(t, err)
 
 	// Verify there's something written
-	bs, _ := ioutil.ReadFile(path)
+	bs, _ := os.ReadFile(path)
 	require.Greater(t, len(bs), 1)
 
 	// Read the decrypted file contents
