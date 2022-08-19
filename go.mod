@@ -3,7 +3,7 @@ module github.com/moov-io/cryptfs
 go 1.19
 
 require (
-	github.com/ProtonMail/go-crypto v0.0.0-20220819082139-33af46df2953
+	github.com/ProtonMail/go-crypto v0.0.0-20220819155348-b76dceea2ffa
 	github.com/stretchr/testify v1.8.0
 )
 
