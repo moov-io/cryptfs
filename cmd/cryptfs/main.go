@@ -58,7 +58,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("ERROR creating cryptfs: %v", err)
 		}
-		out, err := decrypt(cc)
+		out, err := decrypt(cc, *flagDecrypt)
 		if err != nil {
 			log.Fatalf("ERROR during decryption: %v", err)
 		}
@@ -71,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("ERROR creating cryptfs: %v", err)
 		}
-		out, err := encrypt(cc)
+		out, err := encrypt(cc, *flagEncrypt)
 		if err != nil {
 			log.Fatalf("ERROR during encryption: %v", err)
 		}
@@ -107,20 +107,15 @@ func setupOutput(flagValue string) io.WriteCloser {
 	return fd
 }
 
+const base64EncodedPrefix = "base64:"
+
 func setupCryptfs() (*cryptfs.FS, error) {
 	var cc cryptfs.Cryptor
 	var err error
 
 	switch {
 	case *flagAES != "":
-		key := []byte(*flagAES)
-		if strings.HasPrefix(*flagAES, "base64:") {
-			key, err = base64.StdEncoding.DecodeString(strings.TrimPrefix(*flagAES, "base64:"))
-			if err != nil {
-				return nil, fmt.Errorf("decoding AES key: %v", err)
-			}
-		}
-		cc, err = cryptfs.NewAESCryptor(key)
+		cc, err = openAESCryptor(*flagAES)
 	}
 	if err != nil {
 		return nil, err
@@ -139,18 +134,52 @@ func setupCryptfs() (*cryptfs.FS, error) {
 	return fs, nil
 }
 
-func decrypt(cc *cryptfs.FS) ([]byte, error) {
-	raw, err := os.ReadFile(*flagDecrypt)
+func openAESCryptor(pathOrValue string) (*cryptfs.AESCryptor, error) {
+	data, err := readFile(pathOrValue)
 	if err != nil {
-		return nil, fmt.Errorf("opening %s -- %v", *flagDecrypt, err)
+		return nil, fmt.Errorf("AES key decode: %v", err)
+	}
+	fmt.Printf("data: %q\n", data)
+
+	// Optionally decode base64 data
+	if strings.HasPrefix(data, base64EncodedPrefix) {
+		data = strings.TrimPrefix(data, base64EncodedPrefix)
+
+		key, err := base64.StdEncoding.DecodeString(data)
+		if err != nil {
+			return nil, fmt.Errorf("decoding AES key: %v", err)
+		}
+		return cryptfs.NewAESCryptor(key)
+	}
+
+	return cryptfs.NewAESCryptor([]byte(data))
+}
+
+// readFile will return the contents of pathOrValue on the local filesystem
+// or return pathOrValue directly.
+func readFile(pathOrValue string) (string, error) {
+	if _, err := os.Stat(pathOrValue); err == nil {
+		bs, err := os.ReadFile(pathOrValue)
+		if err != nil {
+			return "", fmt.Errorf("opening %s failed: %v", pathOrValue, err)
+		}
+		return string(bs), nil
+	}
+	return pathOrValue, nil
+}
+
+func decrypt(cc *cryptfs.FS, path string) ([]byte, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("opening %s -- %v", path, err)
 	}
 	return cc.Reveal(raw)
 }
 
-func encrypt(cc *cryptfs.FS) ([]byte, error) {
-	raw, err := os.ReadFile(*flagEncrypt)
+func encrypt(cc *cryptfs.FS, path string) ([]byte, error) {
+	raw, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("opening %s -- %v", *flagEncrypt, err)
+		return nil, fmt.Errorf("opening %s -- %v", path, err)
 	}
 	return cc.Disfigure(raw)
 }
