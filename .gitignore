@@ -18,6 +18,7 @@
 misspell*
 staticcheck*
 lint-project.sh
+gitleaks.tar.gz
 
 .vscode/launch.json
 
