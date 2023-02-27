@@ -1,3 +1,16 @@
+## v0.4.1 (Released 2023-02-27)
+
+IMPROVEMENTS
+
+- cmd/cryptfs: cleanup main code and add tests
+
+BUILD
+
+- build: remove deprecated ioutil functions
+- fix(deps): update github.com/protonmail/go-crypto digest to 7d5c6f0
+- fix(deps): update module github.com/stretchr/testify to v1.8.2
+- build: update golang.org/x/sys to v0.5.0
+
 ## v0.4.0 (Released 2022-06-07)
 
 ADDITIONS
