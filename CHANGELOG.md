@@ -1,3 +1,10 @@
+## v0.4.2 (Released 2023-05-19)
+
+BUILD
+
+- fix(deps): update module github.com/stretchr/testify to v1.8.3
+- fix(deps): update github.com/ProtonMail/go-crypto digest to a9481249
+
 ## v0.4.1 (Released 2023-02-27)
 
 IMPROVEMENTS
