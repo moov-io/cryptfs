@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20220407094043-a94812496cf5
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
