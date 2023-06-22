@@ -61,6 +61,7 @@ func (g *gzipCompressor) compress(data []byte) ([]byte, error) {
 	}
 	_, err = w.Write(data)
 	if err != nil {
+		w.Close()
 		return nil, fmt.Errorf("gzip compress: %w", err)
 	}
 	err = w.Close()
@@ -82,6 +83,7 @@ func (g *gzipCompressor) decompress(data []byte) ([]byte, error) {
 	}
 	bs, err := io.ReadAll(r)
 	if err != nil {
+		r.Close()
 		return nil, fmt.Errorf("gzip read: %w", err)
 	}
 	err = r.Close()
