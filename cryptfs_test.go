@@ -18,6 +18,7 @@
 package cryptfs
 
 import (
+	"compress/gzip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,22 +44,63 @@ func TestCryptfsEmpty(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCryptfsAES(t *testing.T) {
+func TestAES(t *testing.T) {
 	key := []byte(strings.Repeat("1", 16))
+
 	cc, err := NewAESCryptor(key)
 	require.NoError(t, err)
-	testCryptfs(t, cc)
+
+	t.Run("without compression or encoding", func(t *testing.T) {
+		fsys, err := New(cc)
+		require.NoError(t, err)
+		testCryptFS(t, fsys)
+	})
+
+	t.Run("with compression", func(t *testing.T) {
+		fsys, err := New(cc)
+		require.NoError(t, err)
+
+		fsys.SetCompression(Gzip())
+
+		testCryptFS(t, fsys)
+	})
+
+	t.Run("with encoding", func(t *testing.T) {
+		fsys, err := New(cc)
+		require.NoError(t, err)
+
+		fsys.SetCoder(Base64())
+
+		testCryptFS(t, fsys)
+	})
+
+	t.Run("with compression and encoding", func(t *testing.T) {
+		fsys, err := New(cc)
+		require.NoError(t, err)
+
+		fsys.SetCompression(GzipRequired(gzip.BestCompression))
+		fsys.SetCoder(Base64())
+
+		testCryptFS(t, fsys)
+	})
 }
 
 func TestCryptGPG(t *testing.T) {
 	dir := filepath.Join("internal", "gpgx", "testdata")
+
 	cc, err := NewGPGCryptorFile(
 		filepath.Join(dir, "key.pub"),
 		filepath.Join(dir, "key.priv"),
 		[]byte("password"),
 	)
 	require.NoError(t, err)
-	testCryptfs(t, cc)
+
+	fsys, err := New(cc)
+	require.NoError(t, err)
+
+	fsys.SetCompression(Gzip())
+
+	testCryptFS(t, fsys)
 }
 
 func TestCryptGPG2(t *testing.T) {
@@ -72,26 +114,29 @@ func TestCryptGPG2(t *testing.T) {
 
 	cc, err := NewGPGCryptor(pubKey, privKey, []byte("password"))
 	require.NoError(t, err)
-	testCryptfs(t, cc)
+
+	fsys, err := New(cc)
+	require.NoError(t, err)
+
+	fsys.SetCoder(Base64())
+
+	testCryptFS(t, fsys)
 }
 
-func testCryptfs(t *testing.T, cryptor Cryptor) {
+func testCryptFS(t *testing.T, fsys *FS) {
 	t.Helper()
 
 	parent := t.TempDir()
-	filesys, err := New(cryptor)
-	require.NoError(t, err)
-	filesys.SetCoder(Base64())
 
 	// Verify error when file isn't there
-	file, err := filesys.Open(filepath.Join(parent, "foo.txt"))
+	file, err := fsys.Open(filepath.Join(parent, "foo.txt"))
 	require.ErrorIs(t, err, os.ErrNotExist)
 	require.Nil(t, file)
 
 	// Write a file and verify the encrypted contents
 	path := filepath.Join(parent, "bar.txt")
 
-	err = filesys.WriteFile(path, []byte("hello, world"), 0600)
+	err = fsys.WriteFile(path, []byte("hello, world"), 0600)
 	require.NoError(t, err)
 
 	// Verify there's something written
@@ -99,7 +144,7 @@ func testCryptfs(t *testing.T, cryptor Cryptor) {
 	require.Greater(t, len(bs), 1)
 
 	// Read the decrypted file contents
-	bs, err = filesys.ReadFile(path)
+	bs, err = fsys.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(bs))
 }

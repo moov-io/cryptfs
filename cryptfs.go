@@ -24,8 +24,9 @@ import (
 )
 
 type FS struct {
-	cryptor Cryptor
-	coder   Coder
+	compressor Compressor
+	cryptor    Cryptor
+	coder      Coder
 }
 
 // New returns a FS instance with the specified Cryptor used for all operations.
@@ -34,8 +35,9 @@ func New(cryptor Cryptor) (*FS, error) {
 		return nil, errors.New("nil Cryptor")
 	}
 	return &FS{
-		cryptor: cryptor,
-		coder:   NoEncoding(),
+		compressor: NoCompression(),
+		cryptor:    cryptor,
+		coder:      NoEncoding(),
 	}, nil
 }
 
@@ -46,6 +48,12 @@ func FromCryptor(cryptor Cryptor, err error) (*FS, error) {
 		return nil, err
 	}
 	return New(cryptor)
+}
+
+func (fsys *FS) SetCompression(compressor Compressor) {
+	if fsys != nil && compressor != nil {
+		fsys.compressor = compressor
+	}
 }
 
 func (fsys *FS) SetCoder(coder Coder) {
@@ -61,15 +69,19 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 
 // Reveal will decode and then decrypt the bytes its given
 func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
-	decodedBytes, err := fsys.coder.decode(encodedBytes)
+	bs, err := fsys.coder.decode(encodedBytes)
 	if err != nil {
 		return nil, err
 	}
-	plain, err := fsys.cryptor.decrypt(decodedBytes)
+	bs, err = fsys.cryptor.decrypt(bs)
 	if err != nil {
 		return nil, err
 	}
-	return plain, nil
+	bs, err = fsys.compressor.decompress(bs)
+	if err != nil {
+		return nil, err
+	}
+	return bs, nil
 }
 
 // ReadFile will attempt to open, decode, and decrypt a file.
@@ -83,15 +95,19 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 
 // Disfigure will encrypt and encode the plaintext
 func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
-	encryptedBytes, err := fsys.cryptor.encrypt(plaintext)
+	bs, err := fsys.compressor.compress(plaintext)
 	if err != nil {
 		return nil, err
 	}
-	encodedBytes, err := fsys.coder.encode(encryptedBytes)
+	bs, err = fsys.cryptor.encrypt(bs)
 	if err != nil {
 		return nil, err
 	}
-	return encodedBytes, nil
+	bs, err = fsys.coder.encode(bs)
+	if err != nil {
+		return nil, err
+	}
+	return bs, nil
 }
 
 // WriteFile will attempt to encrypt, encode, and create a file under the given filepath.
