@@ -54,6 +54,7 @@ func (fsys *FS) SetCoder(coder Coder) {
 	}
 }
 
+// Open will open a file at the given name
 func (fsys *FS) Open(name string) (fs.File, error) {
 	return os.Open(name)
 }
@@ -80,6 +81,7 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 	return fsys.Reveal(encodedBytes)
 }
 
+// Disfigure will encrypt and encode the plaintext
 func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
 	encryptedBytes, err := fsys.cryptor.encrypt(plaintext)
 	if err != nil {
