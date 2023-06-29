@@ -1,3 +1,15 @@
+## v0.5.0 (Released 2023-06-29)
+
+IMPROVEMENTS
+
+- docs: godoc headers for Open and Disfigure
+- feat: add (gzip) compression
+
+BUILD
+
+- chore: update github.com/ProtonMail/go-crypto to a94812496cf5
+- fix(deps): update module github.com/stretchr/testify to v1.8.4
+
 ## v0.4.2 (Released 2023-05-19)
 
 BUILD
