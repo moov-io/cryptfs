@@ -21,3 +21,17 @@ type Cryptor interface {
 	encrypt(data []byte) ([]byte, error)
 	decrypt(data []byte) ([]byte, error)
 }
+
+func NoEncryption() Cryptor {
+	return &nothingCryptor{}
+}
+
+type nothingCryptor struct{}
+
+func (*nothingCryptor) encrypt(data []byte) ([]byte, error) {
+	return data, nil
+}
+
+func (*nothingCryptor) decrypt(data []byte) ([]byte, error) {
+	return data, nil
+}
