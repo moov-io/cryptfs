@@ -1,3 +1,14 @@
+## v0.6.0 (Released 2023-07-12)
+
+IMPROVEMENTS
+
+- feat: add config struct for creating *FS instances
+- feat: add nothing cryptor
+
+BUILD
+
+- fix(deps): update github.com/protonmail/go-crypto digest to e01326f
+
 ## v0.5.0 (Released 2023-06-29)
 
 IMPROVEMENTS
