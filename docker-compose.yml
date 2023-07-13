@@ -30,9 +30,10 @@ services:
         condition: service_healthy
     networks:
       - intranet
-    command: |
-      vault secrets enable transit &&
-      vault write -f transit/keys/testkey
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "vault secrets enable transit; vault write -f transit/keys/testkey"
 
 networks:
   intranet:

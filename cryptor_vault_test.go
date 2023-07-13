@@ -18,7 +18,9 @@
 package cryptfs
 
 import (
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -26,6 +28,15 @@ import (
 )
 
 func TestVaultCryptor(t *testing.T) {
+	isGithubCI := os.Getenv("GITHUB_ACTIONS") != ""
+	isLinux := runtime.GOOS == "linux"
+	if isGithubCI && !isLinux {
+		t.Skipf("docker is not supported on %s github runners", runtime.GOOS)
+	}
+	if testing.Short() {
+		t.Skip("skipping network tests")
+	}
+
 	conf := VaultConfig{
 		Address: "http://localhost:8200",
 		Token: &TokenConfig{

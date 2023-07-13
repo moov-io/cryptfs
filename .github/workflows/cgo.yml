@@ -28,14 +28,11 @@ jobs:
       run: choco install -y make mingw
 
     - name: Setup
+      if: runner.os == 'Linux'
       run: make setup
 
     - name: Check
       run: make check
-
-    - name: Teardown
-      if: ${{ always() }}
-      run: make teardown
 
     - name: Upload Code Coverage
       if: runner.os == 'Linux'
