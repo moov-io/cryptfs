@@ -27,10 +27,17 @@ jobs:
       if: runner.os == 'Windows'
       run: choco install -y make mingw
 
+    - name: Setup
+      run: make setup
+
     - name: Check
       run: make check
       env:
         CGO_ENABLED: "0"
+
+    - name: Teardown
+      if: ${{ always() }}
+      run: make teardown
 
     - name: Upload Code Coverage
       if: runner.os == 'Linux'

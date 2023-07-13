@@ -8,6 +8,14 @@ else
 	GOCYCLO_LIMIT=26 COVER_THRESHOLD=65.0 time ./lint-project.sh
 endif
 
+.PHONY: setup
+setup:
+	docker-compose up -d --force-recreate --remove-orphans
+
+.PHONY: teardown
+teardown:
+	-docker-compose down --remove-orphans
+
 .PHONY: clean
 clean:
 	@rm -rf ./bin/ ./tmp/ coverage.txt misspell* staticcheck lint-project.sh
