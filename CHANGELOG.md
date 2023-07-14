@@ -1,3 +1,9 @@
+## v0.7.0 (Released 2023-07-14)
+
+IMPROVEMENTS
+
+- feat: add Vault cryptor
+
 ## v0.6.0 (Released 2023-07-12)
 
 IMPROVEMENTS
