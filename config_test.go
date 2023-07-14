@@ -101,4 +101,19 @@ func TestFromConfig(t *testing.T) {
 		require.NoError(t, err)
 		testCryptFS(t, fsys)
 	})
+
+	t.Run("Vault", func(t *testing.T) {
+		conf.Encryption.GPG = nil
+		conf.Encryption.Vault = &VaultConfig{
+			Address: "http://localhost:8200",
+			Token: &TokenConfig{
+				Token: "myroot",
+			},
+			KeyName: "testkey",
+		}
+
+		fsys, err := FromConfig(conf)
+		require.NoError(t, err)
+		testCryptFS(t, fsys)
+	})
 }

@@ -21,8 +21,9 @@ type GzipConfig struct {
 }
 
 type EncryptionConfig struct {
-	AES *AESConfig `json:"aes" yaml:"aes"`
-	GPG *GPGConfig `json:"gpg" yaml:"gpg"`
+	AES   *AESConfig   `json:"aes" yaml:"aes"`
+	GPG   *GPGConfig   `json:"gpg" yaml:"gpg"`
+	Vault *VaultConfig `json:"vault" yaml:"vault"`
 }
 
 type AESConfig struct {

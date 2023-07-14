@@ -27,6 +27,10 @@ jobs:
       if: runner.os == 'Windows'
       run: choco install -y make mingw
 
+    - name: Setup
+      if: runner.os == 'Linux'
+      run: make setup
+
     - name: Check
       run: make check
 
