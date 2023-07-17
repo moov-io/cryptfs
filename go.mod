@@ -3,7 +3,8 @@ module github.com/moov-io/cryptfs
 go 1.19
 
 require (
-	github.com/ProtonMail/go-crypto v0.0.0-20230710112148-e01326fd72eb
+	github.com/ProtonMail/go-crypto v0.0.0-20230717121422-5aa5874ade95
+	github.com/hashicorp/vault/api v1.9.2
 	github.com/stretchr/testify v1.8.4
 )
 
@@ -21,7 +22,6 @@ require (
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/hashicorp/vault/api v1.9.2 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
