@@ -22,14 +22,9 @@ import (
 	"math/rand"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
-
-func init() {
-	rand.Seed(time.Now().Unix())
-}
 
 func BenchmarkCryptfs__AES(b *testing.B) {
 	cc, err := NewAESCryptor([]byte("1234567812345678"))
