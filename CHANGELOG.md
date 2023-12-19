@@ -1,3 +1,11 @@
+## v0.7.1 (Released 2023-12-19)
+
+BUILD
+
+- build: always use latest Go release
+- build: update moov-io/base and golang.org/x/crypto
+- chore(deps): update hashicorp/vault docker tag to v1.15
+
 ## v0.7.0 (Released 2023-07-14)
 
 IMPROVEMENTS
