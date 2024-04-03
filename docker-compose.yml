@@ -2,7 +2,7 @@ version: '3'
 
 services:
   vault:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.16
     ports:
       - "8200:8200"
     environment:
@@ -21,7 +21,7 @@ services:
       - intranet
 
   setup:
-    image: hashicorp/vault:1.15
+    image: hashicorp/vault:1.16
     environment:
       VAULT_ADDR: "http://vault:8200"
       VAULT_TOKEN: "myroot"
