@@ -1,3 +1,17 @@
+## v0.7.2 (Released 2024-05-10)
+
+IMPROVEMENTS
+
+- fix: set vault cryptor in FromConfig
+
+BUILD
+
+- build: run tests on oldstable, run "go test" on windows
+- chore(deps): update dependency go to v1.22.3
+- chore(deps): update hashicorp/vault docker tag to v1.16
+- fix(deps): update module github.com/hashicorp/vault/api to v1.13.0
+- fix(deps): update module github.com/protonmail/go-crypto to v1
+
 ## v0.7.1 (Released 2023-12-19)
 
 BUILD
