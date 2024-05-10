@@ -71,6 +71,9 @@ func FromConfig(conf Config) (*FS, error) {
 		if conf.Encryption.GPG.PublicPath != "" && conf.Encryption.GPG.PrivatePath != "" {
 			cryptor, err = NewGPGCryptorFile(conf.Encryption.GPG.PublicPath, conf.Encryption.GPG.PrivatePath, password)
 		}
+
+	case conf.Encryption.Vault != nil:
+		cryptor, err = NewVaultCryptor(*conf.Encryption.Vault)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("cryptor from config: %w", err)

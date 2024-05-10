@@ -28,11 +28,8 @@ import (
 )
 
 func TestVaultCryptor(t *testing.T) {
-	isGithubCI := os.Getenv("GITHUB_ACTIONS") != ""
-	isLinux := runtime.GOOS == "linux"
-	if isGithubCI && !isLinux {
-		t.Skipf("docker is not supported on %s github runners", runtime.GOOS)
-	}
+	shouldSkipDockerTest(t)
+
 	if testing.Short() {
 		t.Skip("skipping network tests")
 	}
@@ -68,4 +65,14 @@ func TestVaultCryptor(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, input, bs)
 	})
+}
+
+func shouldSkipDockerTest(t *testing.T) {
+	t.Helper()
+
+	isGithubCI := os.Getenv("GITHUB_ACTIONS") != ""
+	isLinux := runtime.GOOS == "linux"
+	if isGithubCI && !isLinux {
+		t.Skipf("docker is not supported on %s github runners", runtime.GOOS)
+	}
 }

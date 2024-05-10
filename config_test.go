@@ -18,6 +18,7 @@
 package cryptfs
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -31,6 +32,8 @@ func TestFromConfig(t *testing.T) {
 	t.Run("zero value", func(t *testing.T) {
 		fsys, err := FromConfig(conf)
 		require.NoError(t, err)
+		require.Equal(t, "*cryptfs.nothingCryptor", fmt.Sprintf("%T", fsys.cryptor))
+
 		testCryptFS(t, fsys)
 	})
 
@@ -40,6 +43,8 @@ func TestFromConfig(t *testing.T) {
 
 		fsys, err := FromConfig(conf)
 		require.NoError(t, err)
+		require.Equal(t, "*cryptfs.nothingCryptor", fmt.Sprintf("%T", fsys.cryptor))
+
 		testCryptFS(t, fsys)
 	})
 
@@ -50,6 +55,8 @@ func TestFromConfig(t *testing.T) {
 
 		fsys, err := FromConfig(conf)
 		require.NoError(t, err)
+		require.Equal(t, "*cryptfs.AESCryptor", fmt.Sprintf("%T", fsys.cryptor))
+
 		testCryptFS(t, fsys)
 	})
 
@@ -83,6 +90,7 @@ func TestFromConfig(t *testing.T) {
 
 		fsys, err = FromConfig(conf)
 		require.NoError(t, err)
+		require.Equal(t, "*cryptfs.GPGCryptor", fmt.Sprintf("%T", fsys.cryptor))
 
 		bs, err := fsys.ReadFile(path)
 		require.NoError(t, err)
@@ -99,10 +107,14 @@ func TestFromConfig(t *testing.T) {
 
 		fsys, err := FromConfig(conf)
 		require.NoError(t, err)
+		require.Equal(t, "*cryptfs.GPGCryptor", fmt.Sprintf("%T", fsys.cryptor))
+
 		testCryptFS(t, fsys)
 	})
 
 	t.Run("Vault", func(t *testing.T) {
+		shouldSkipDockerTest(t)
+
 		conf.Encryption.GPG = nil
 		conf.Encryption.Vault = &VaultConfig{
 			Address: "http://localhost:8200",
@@ -114,6 +126,8 @@ func TestFromConfig(t *testing.T) {
 
 		fsys, err := FromConfig(conf)
 		require.NoError(t, err)
+		require.Equal(t, "*cryptfs.VaultCryptor", fmt.Sprintf("%T", fsys.cryptor))
+
 		testCryptFS(t, fsys)
 	})
 }
