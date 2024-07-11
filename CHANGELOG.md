@@ -1,3 +1,13 @@
+## v0.7.3 (Released 2024-07-11)
+
+BUILD
+
+- chore(deps): update dependency go to v1.22.4
+- chore(deps): update dependency go to v1.22.5
+- chore(deps): update hashicorp/vault docker tag to v1.17
+- fix(deps): update module github.com/hashicorp/vault/api to v1.14.0
+- gpgx: update example keys
+
 ## v0.7.2 (Released 2024-05-10)
 
 IMPROVEMENTS
