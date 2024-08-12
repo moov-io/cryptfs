@@ -10,11 +10,11 @@ endif
 
 .PHONY: setup
 setup:
-	docker-compose up -d --force-recreate --remove-orphans
+	docker compose up -d --force-recreate --remove-orphans
 
 .PHONY: teardown
 teardown:
-	-docker-compose down --remove-orphans
+	-docker compose down --remove-orphans
 
 .PHONY: clean
 clean:
