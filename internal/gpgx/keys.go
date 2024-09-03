@@ -61,11 +61,17 @@ func decryptPrivateKey(entityList openpgp.EntityList, password []byte) (openpgp.
 
 	// Get the passphrase and read the private key.
 	if entity.PrivateKey != nil && len(password) > 0 {
-		entity.PrivateKey.Decrypt(password)
+		err := entity.PrivateKey.Decrypt(password)
+		if err != nil {
+			return nil, fmt.Errorf("decrypting private key failed: %w", err)
+		}
 	}
-	for _, subkey := range entity.Subkeys {
+	for idx, subkey := range entity.Subkeys {
 		if subkey.PrivateKey != nil && len(password) > 0 {
-			subkey.PrivateKey.Decrypt(password)
+			err := subkey.PrivateKey.Decrypt(password)
+			if err != nil {
+				return nil, fmt.Errorf("decrypting subkey %d failed: %w", idx, err)
+			}
 		}
 	}
 

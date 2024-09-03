@@ -63,6 +63,12 @@ func TestGPGError(t *testing.T) {
 	el, err = ReadPrivateKeyFile("invalid-path", []byte("password"))
 	require.Error(t, err)
 	require.Empty(t, el)
+
+	t.Run("invalid password", func(t *testing.T) {
+		el, err = ReadPrivateKeyFile(filepath.Join("testdata", "key.priv"), []byte("invalid"))
+		require.ErrorContains(t, err, "decrypting private key failed: openpgp: invalid data: private key checksum failure")
+		require.Empty(t, el)
+	})
 }
 
 func TestGPG__readMessageError(t *testing.T) {
