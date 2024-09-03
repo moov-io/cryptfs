@@ -83,6 +83,15 @@ func TestAES(t *testing.T) {
 
 		testCryptFS(t, fsys)
 	})
+
+	t.Run("with HMAC key", func(t *testing.T) {
+		fsys, err := New(cc)
+		require.NoError(t, err)
+
+		fsys.SetHMACKey([]byte(strings.Repeat("abcdef", 10)))
+
+		testCryptFS(t, fsys)
+	})
 }
 
 func TestCryptGPG(t *testing.T) {
@@ -101,6 +110,12 @@ func TestCryptGPG(t *testing.T) {
 	fsys.SetCompression(Gzip())
 
 	testCryptFS(t, fsys)
+
+	t.Run("with HMAC key", func(t *testing.T) {
+		fsys.SetHMACKey([]byte(strings.Repeat("abcdef", 10)))
+
+		testCryptFS(t, fsys)
+	})
 }
 
 func TestCryptGPG2(t *testing.T) {

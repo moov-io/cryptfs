@@ -18,7 +18,10 @@
 package cryptfs
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 )
@@ -27,9 +30,13 @@ type FS struct {
 	compressor Compressor
 	cryptor    Cryptor
 	coder      Coder
+
+	hmacKey []byte
 }
 
 // New returns a FS instance with the specified Cryptor used for all operations.
+//
+// Note: The defaults are to use no compression and no encryption.
 func New(cryptor Cryptor) (*FS, error) {
 	if cryptor == nil {
 		return nil, errors.New("nil Cryptor")
@@ -62,6 +69,12 @@ func (fsys *FS) SetCoder(coder Coder) {
 	}
 }
 
+func (fsys *FS) SetHMACKey(key []byte) {
+	if fsys != nil {
+		fsys.hmacKey = key
+	}
+}
+
 // Open will open a file at the given name
 func (fsys *FS) Open(name string) (fs.File, error) {
 	return os.Open(name)
@@ -73,6 +86,23 @@ func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Verify MAC if hmacKey is set
+	if len(fsys.hmacKey) > 1 {
+		macSize := sha256.Size
+		if len(bs) < macSize {
+			return nil, errors.New("data too short to contain valid HMAC")
+		}
+
+		receivedMAC := bs[:macSize]
+		bs = bs[macSize:]
+
+		expectedMAC := fsys.computeHMAC(bs)
+		if !hmac.Equal(receivedMAC, expectedMAC) {
+			return nil, errors.New("invalid MAC, data integrity could be compromised")
+		}
+	}
+
 	bs, err = fsys.cryptor.decrypt(bs)
 	if err != nil {
 		return nil, err
@@ -103,11 +133,24 @@ func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Prepend the MAC to the encrypted data
+	if len(fsys.hmacKey) > 1 {
+		mac := fsys.computeHMAC(bs)
+		bs = append(mac, bs...)
+	}
+
 	bs, err = fsys.coder.encode(bs)
 	if err != nil {
 		return nil, err
 	}
 	return bs, nil
+}
+
+func (fsys *FS) computeHMAC(data []byte) []byte {
+	mac := hmac.New(sha256.New, fsys.hmacKey)
+	mac.Write(data)
+	return mac.Sum(nil)
 }
 
 // WriteFile will attempt to encrypt, encode, and create a file under the given filepath.

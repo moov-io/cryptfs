@@ -9,6 +9,8 @@ type Config struct {
 	Compression CompressionConfig `json:"compression" yaml:"compression"`
 	Encryption  EncryptionConfig  `json:"encryption" yaml:"encryption"`
 	Encoding    EncodingConfig    `json:"encoding" yaml:"encoding"`
+
+	HMACKey string `json:"hmacKey" yaml:"hmacKey"`
 }
 
 type CompressionConfig struct {
@@ -101,6 +103,10 @@ func FromConfig(conf Config) (*FS, error) {
 	// Encoding
 	if conf.Encoding.Base64 {
 		fsys.SetCoder(Base64())
+	}
+
+	if len(conf.HMACKey) > 0 {
+		fsys.SetHMACKey([]byte(conf.HMACKey))
 	}
 
 	return fsys, nil

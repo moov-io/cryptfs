@@ -65,6 +65,12 @@ func TestVaultCryptor(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, input, bs)
 	})
+
+	t.Run("with HMAC key", func(t *testing.T) {
+		fsys.SetHMACKey([]byte(strings.Repeat("abcdef", 10)))
+
+		testCryptFS(t, fsys)
+	})
 }
 
 func shouldSkipDockerTest(t *testing.T) {
