@@ -1,1 +1,3 @@
 internal/gpgx/testdata/key.priv:private-key:1
+testdata/valid.json:generic-api-key:17
+testdata/valid.yaml:generic-api-key:10

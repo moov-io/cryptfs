@@ -1,0 +1,10 @@
+compression:
+  gzip:
+    level: -1
+    required: true
+encryption:
+  aes:
+    key: "1234567887654321"
+encoding:
+  base64: true
+hmacKey: "de57e09f-e299-4de6-94ab-cd89d894c900"

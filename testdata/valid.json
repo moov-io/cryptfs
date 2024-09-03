@@ -1,0 +1,18 @@
+{
+  "compression": {
+    "gzip": {
+      "required": false
+    }
+  },
+  "encryption": {
+    "gpg": {
+      "publicPath": "./internal/gpgx/testdata/key.pub",
+      "privatePath": "./internal/gpgx/testdata/key.priv",
+      "privatePassword": "password"
+    },
+  },
+  "encoding": {
+    "base64": true
+  },
+  "hmacKey": "de57e09f-e299-4de6-94ab-cd89d894c900"
+}

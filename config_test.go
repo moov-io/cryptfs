@@ -18,12 +18,16 @@
 package cryptfs
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestFromConfig(t *testing.T) {
@@ -129,5 +133,48 @@ func TestFromConfig(t *testing.T) {
 		require.Equal(t, "*cryptfs.VaultCryptor", fmt.Sprintf("%T", fsys.cryptor))
 
 		testCryptFS(t, fsys)
+	})
+}
+
+// FromFile will read the given path and unmarshal a Config in YAML or JSON format.
+// If a reading a config doesn't fail an *FS will be returned from the config.
+func FromFile(path string) (*FS, error) {
+	bs, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s failed: %w", path, err)
+	}
+
+	var conf Config
+	yamlDecoder := yaml.NewDecoder(bytes.NewReader(bs))
+	yamlDecoder.KnownFields(true)
+	yamlError := yamlDecoder.Decode(&conf)
+	if yamlError == nil {
+		return FromConfig(conf)
+	}
+
+	jsonDecoder := json.NewDecoder(bytes.NewReader(bs))
+	jsonDecoder.DisallowUnknownFields()
+
+	jsonError := jsonDecoder.Decode(&conf)
+	if jsonError == nil {
+		return FromConfig(conf)
+	}
+
+	return nil, fmt.Errorf("error reading config from %s\n  %w\n  %w", path, yamlError, jsonError)
+}
+
+func TestFromFile(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		fsys, err := FromFile(filepath.Join("testdata", "valid.yaml"))
+		require.NoError(t, err)
+		require.NotNil(t, fsys)
+		require.Equal(t, "*cryptfs.AESCryptor", fmt.Sprintf("%T", fsys.cryptor))
+		require.Equal(t, "de57e09f-e299-4de6-94ab-cd89d894c900", string(fsys.hmacKey))
+
+		fsys, err = FromFile(filepath.Join("testdata", "valid.json"))
+		require.NoError(t, err)
+		require.NotNil(t, fsys)
+		require.Equal(t, "*cryptfs.GPGCryptor", fmt.Sprintf("%T", fsys.cryptor))
+		require.Equal(t, "de57e09f-e299-4de6-94ab-cd89d894c900", string(fsys.hmacKey))
 	})
 }

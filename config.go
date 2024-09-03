@@ -27,7 +27,7 @@ type EncryptionConfig struct {
 }
 
 type AESConfig struct {
-	Key     string `json:"key" yaml:"yaml"`
+	Key     string `json:"key" yaml:"key"`
 	KeyPath string `json:"keyPath" yaml:"keyPath"`
 }
 
@@ -41,6 +41,7 @@ type EncodingConfig struct {
 	Base64 bool `json:"base64" yaml:"base64"`
 }
 
+// FromConfig will create a *FS from the given Config
 func FromConfig(conf Config) (*FS, error) {
 	var err error
 
