@@ -1,3 +1,24 @@
+## v0.8.0 (Released 2024-09-03)
+
+IMPROVEMENTS
+
+- config: verify json/yaml files read as expected
+- feat: support HMAC key to verify data
+- feat: verify GPG signatures, sign messages
+- fix: avoid panic in gzip decompress with nil input
+- gpgx: check errors when decrypting private keys
+- gpgx: improve error messages
+- refactor: wrap errors for clarity
+- test: verify HMAC with gpg
+- test: verify Sign / VerifySignature
+
+BUILD
+
+- chore(deps): update actions/checkout action to v4
+- chore(deps): update actions/setup-go action to v5
+- chore(deps): update dependency go to v1.22.6
+- chore(deps): update github/codeql-action action to v3
+
 ## v0.7.3 (Released 2024-07-11)
 
 BUILD
