@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"crypto"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -84,33 +85,33 @@ func Encrypt(msg []byte, pubkeys openpgp.EntityList) ([]byte, error) {
 	encbuf := new(bytes.Buffer)
 	encCloser, err = openpgp.Encrypt(encbuf, pubkeys, nil, nil, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encrypt: %w", err)
 	}
 
 	_, err = encCloser.Write(msg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encCloser.Write: %w", err)
 	}
 
 	err = encCloser.Close()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encCloser.Close: %w", err)
 	}
 
 	armorbuf := new(bytes.Buffer)
 	armorCloser, err = armor.Encode(armorbuf, "PGP MESSAGE", nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("armor encode: %w", err)
 	}
 
 	_, err = armorCloser.Write(encbuf.Bytes())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("armorCloser.Write : %w", err)
 	}
 
 	err = armorCloser.Close()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("armorCloser.Close : %w", err)
 	}
 
 	return armorbuf.Bytes(), nil
@@ -124,34 +125,33 @@ func Decrypt(cipherArmored []byte, keys openpgp.EntityList) ([]byte, error) {
 }
 
 func readMessage(armoredMessage []byte, keys openpgp.EntityList) ([]byte, error) {
-	// Decode armored message
 	decbuf := bytes.NewBuffer(armoredMessage)
 	result, err := armor.Decode(decbuf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding armored message: %w", err)
 	}
 
-	// Decrypt with private key
 	md, err := openpgp.ReadMessage(result.Body, keys, nil, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading PGP message: %w", err)
 	}
 
-	// If pubkey included, verify
 	if len(keys) == 2 {
 		if md.SignedBy == nil || md.SignedBy.PublicKey == nil {
 			return nil, errors.New("verifying public key included, but message is not signed")
-		} else if !(bytes.Equal(md.SignedBy.PublicKey.Fingerprint, keys[1].PrimaryKey.Fingerprint)) {
+		}
+		if !bytes.Equal(md.SignedBy.PublicKey.Fingerprint, keys[1].PrimaryKey.Fingerprint) {
 			return nil, errors.New("signature pubkey doesn't match signing pubkey")
 		}
 	}
 
 	bytes, err := io.ReadAll(md.UnverifiedBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading decrypted message body: %w", err)
 	}
+
 	if md.SignatureError != nil {
-		return nil, md.SignatureError
+		return nil, fmt.Errorf("signature verification error: %w", md.SignatureError)
 	}
 
 	return bytes, nil
