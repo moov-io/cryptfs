@@ -136,6 +136,12 @@ func TestCryptGPG2(t *testing.T) {
 	fsys.SetCoder(Base64())
 
 	testCryptFS(t, fsys)
+
+	t.Run("with HMAC key", func(t *testing.T) {
+		fsys.SetHMACKey([]byte(strings.Repeat("abcdef", 10)))
+
+		testCryptFS(t, fsys)
+	})
 }
 
 func testCryptFS(t *testing.T, fsys *FS) {
