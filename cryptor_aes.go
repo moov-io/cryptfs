@@ -22,6 +22,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -65,7 +66,7 @@ func (c *AESCryptor) decrypt(ciphertext []byte) ([]byte, error) {
 	nonce, encryptedMessage := ciphertext[:nonceSize], ciphertext[nonceSize:]
 	plaintext, err := gcm.Open(nil, nonce, encryptedMessage, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("AES decryption failed: %w", err)
 	}
 	return plaintext, nil
 }

@@ -77,14 +77,18 @@ func (fsys *FS) SetHMACKey(key []byte) {
 
 // Open will open a file at the given name
 func (fsys *FS) Open(name string) (fs.File, error) {
-	return os.Open(name)
+	fd, err := os.Open(name)
+	if err != nil {
+		return nil, fmt.Errorf("opening %s failed: %w", name, err)
+	}
+	return fd, nil
 }
 
 // Reveal will decode and then decrypt the bytes its given
 func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
 	bs, err := fsys.coder.decode(encodedBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decoding: %w", err)
 	}
 
 	// Verify MAC if hmacKey is set
@@ -105,11 +109,12 @@ func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
 
 	bs, err = fsys.cryptor.decrypt(bs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decryption: %w", err)
 	}
+
 	bs, err = fsys.compressor.decompress(bs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decompression: %w", err)
 	}
 	return bs, nil
 }
@@ -120,18 +125,23 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return fsys.Reveal(encodedBytes)
+	bs, err := fsys.Reveal(encodedBytes)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s failed: %w", name, err)
+	}
+	return bs, nil
 }
 
 // Disfigure will encrypt and encode the plaintext
 func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
 	bs, err := fsys.compressor.compress(plaintext)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("compression: %w", err)
 	}
+
 	bs, err = fsys.cryptor.encrypt(bs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encryption: %w", err)
 	}
 
 	// Prepend the MAC to the encrypted data
@@ -142,8 +152,9 @@ func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
 
 	bs, err = fsys.coder.encode(bs)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("encoding: %w", err)
 	}
+
 	return bs, nil
 }
 
@@ -159,7 +170,11 @@ func (fsys *FS) WriteFile(filepath string, plaintext []byte, perm fs.FileMode) e
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath, encodedBytes, perm)
+	err = os.WriteFile(filepath, encodedBytes, perm)
+	if err != nil {
+		return fmt.Errorf("writing %s failed: %w", filepath, err)
+	}
+	return nil
 }
 
 var _ fs.FS = (&FS{})

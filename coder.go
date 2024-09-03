@@ -19,6 +19,7 @@ package cryptfs
 
 import (
 	"encoding/base64"
+	"fmt"
 )
 
 // Coder is an interface describing two operations which transform data into
@@ -59,6 +60,9 @@ func (c *base64Coder) encode(data []byte) ([]byte, error) {
 
 func (c *base64Coder) decode(data []byte) ([]byte, error) {
 	dbuf := make([]byte, base64.RawStdEncoding.DecodedLen(len(data)))
-	base64.RawStdEncoding.Decode(dbuf, data)
+	_, err := base64.RawStdEncoding.Decode(dbuf, data)
+	if err != nil {
+		return nil, fmt.Errorf("base64 decode: %w", err)
+	}
 	return dbuf, nil
 }
