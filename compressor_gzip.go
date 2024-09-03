@@ -54,24 +54,35 @@ func GzipRequired(level int) Compressor {
 }
 
 func (g *gzipCompressor) compress(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+
 	var buf bytes.Buffer
 	w, err := gzip.NewWriterLevel(&buf, g.level)
 	if err != nil {
 		return nil, fmt.Errorf("gzip writer (level=%d) create: %w", g.level, err)
 	}
+
 	_, err = w.Write(data)
 	if err != nil {
 		w.Close()
 		return nil, fmt.Errorf("gzip compress: %w", err)
 	}
+
 	err = w.Close()
 	if err != nil {
 		return nil, fmt.Errorf("gzip writer close: %w", err)
 	}
+
 	return buf.Bytes(), nil
 }
 
 func (g *gzipCompressor) decompress(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+
 	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		if g.strict {
@@ -81,6 +92,7 @@ func (g *gzipCompressor) decompress(data []byte) ([]byte, error) {
 			return data, nil
 		}
 	}
+
 	bs, err := io.ReadAll(r)
 	if err != nil {
 		r.Close()

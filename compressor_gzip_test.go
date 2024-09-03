@@ -41,6 +41,24 @@ func TestGzip(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, plain, decompressed)
 	})
+
+	t.Run("empty", func(t *testing.T) {
+		out, err := gz.compress(nil)
+		require.NoError(t, err)
+
+		out, err = gz.decompress(out)
+		require.NoError(t, err)
+		require.Len(t, out, 0)
+
+		require.Equal(t, "", string(out))
+
+		// nil input
+		out, err = gz.decompress(nil)
+		require.NoError(t, err)
+		require.Len(t, out, 0)
+
+		require.Equal(t, "", string(out))
+	})
 }
 
 func TestGzipLevel(t *testing.T) {
