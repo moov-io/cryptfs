@@ -6,12 +6,14 @@ toolchain go1.22.6
 
 require (
 	github.com/ProtonMail/go-crypto v1.0.0
-	github.com/hashicorp/vault/api v1.14.0
+	github.com/hashicorp/vault/api v1.15.0
 	github.com/stretchr/testify v1.9.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cloudflare/circl v1.3.9 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-jose/go-jose/v4 v4.0.2 // indirect
@@ -33,5 +35,4 @@ require (
 	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
