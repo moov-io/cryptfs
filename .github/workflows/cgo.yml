@@ -35,6 +35,6 @@ jobs:
     - name: Check
       run: make check
 
-    - name: Upload Code Coverage
+    - name: Teardown
       if: runner.os == 'Linux'
-      run: bash <(curl -s https://codecov.io/bash)
+      run: make teardown
