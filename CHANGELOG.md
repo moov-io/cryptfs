@@ -1,6 +1,6 @@
 ## Future Releases
 
-Please refer to the [Github Releases](https://github.com/moov-io/cryptfs/releases) page for moov-go for future updates.
+Please refer to the [Github Releases](https://github.com/moov-io/cryptfs/releases) page for future updates.
 
 ## v0.8.0 (Released 2024-09-03)
 
