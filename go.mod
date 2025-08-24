@@ -2,12 +2,12 @@ module github.com/moov-io/cryptfs
 
 go 1.24.0
 
-toolchain go1.24.6
+toolchain go1.25.0
 
 require (
 	github.com/ProtonMail/go-crypto v1.3.0
 	github.com/hashicorp/vault/api v1.20.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
