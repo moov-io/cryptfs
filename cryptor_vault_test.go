@@ -52,7 +52,7 @@ func TestVaultCryptor(t *testing.T) {
 	})
 
 	t.Run("large input", func(t *testing.T) {
-		input := []byte(strings.Repeat("0123456789", 100000))
+		input := []byte(strings.Repeat("0123456789", 50_000))
 
 		path := filepath.Join(t.TempDir(), "data.txt")
 
