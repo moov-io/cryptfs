@@ -35,9 +35,7 @@ func BenchmarkCryptfs__AES(b *testing.B) {
 	require.NoError(b, err)
 	filesys.SetCoder(Base64())
 
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Write a file and read it back
 		filename, data := setup(parent)
 
