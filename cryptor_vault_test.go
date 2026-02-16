@@ -76,6 +76,10 @@ func TestVaultCryptor(t *testing.T) {
 func shouldSkipDockerTest(t *testing.T) {
 	t.Helper()
 
+	if testing.Short() {
+		t.Skip("-short flag specified")
+	}
+
 	isGithubCI := os.Getenv("GITHUB_ACTIONS") != ""
 	isLinux := runtime.GOOS == "linux"
 	if isGithubCI && !isLinux {
