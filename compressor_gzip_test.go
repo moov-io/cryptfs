@@ -19,6 +19,8 @@ package cryptfs
 
 import (
 	"compress/gzip"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -97,4 +99,30 @@ func TestGzipRequired(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, plain, decompressed)
 	})
+}
+
+func BenchmarkCompression_Gzip(b *testing.B) {
+	lowest := gzip.DefaultCompression
+	highest := gzip.BestCompression
+
+	for level := lowest; level <= highest; level++ {
+		b.Run(fmt.Sprintf("level_%d", level), func(b *testing.B) {
+			// setup compressor
+			gz := GzipRequired(level)
+
+			input := []byte(strings.Repeat("hello world", 1432))
+
+			for b.Loop() {
+				out, err := gz.compress(input)
+				require.NoError(b, err)
+				require.NotEmpty(b, out)
+
+				plain, err := gz.decompress(out)
+				require.NoError(b, err)
+
+				require.Equal(b, len(input), len(plain))
+				require.Equal(b, input, plain)
+			}
+		})
+	}
 }
