@@ -22,30 +22,56 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"sync"
 )
 
+const (
+	minGzipLevel = gzip.NoCompression   // 0
+	maxGzipLevel = gzip.BestCompression // 9
+)
+
+var (
+	gzipWriterPools [maxGzipLevel - minGzipLevel + 1]sync.Pool
+	gzipReaderPools [maxGzipLevel - minGzipLevel + 1]sync.Pool
+	once            sync.Once
+)
+
+func initPools() {
+	for i := range gzipWriterPools {
+		level := i + minGzipLevel // 0..9
+		gzipWriterPools[i] = sync.Pool{
+			New: func() any {
+				// io.Discard satisfies the non-nil Writer check in NewWriterLevel and does no I/O.
+				w, _ := gzip.NewWriterLevel(io.Discard, level)
+				return w
+			},
+		}
+		gzipReaderPools[i] = sync.Pool{
+			New: func() any {
+				// Zero-value *gzip.Reader. Reset() will initialize it on first use.
+				// (NewReader() with dummy data fails with ErrHeader, so we can't use it here.)
+				return &gzip.Reader{}
+			},
+		}
+	}
+}
+
 type gzipCompressor struct {
-	strict bool // prevent non-gzipped content
+	strict bool
 	level  int
 }
 
+// Gzip returns a Compressor using DefaultCompression.
 func Gzip() Compressor {
-	return &gzipCompressor{
-		level: gzip.DefaultCompression,
-	}
+	return &gzipCompressor{level: gzip.DefaultCompression}
 }
 
-// GzipLevel allows callers to specify the compression level.
-// Refer to compress/gzip.DefaultCompression and other values for more details.
+// GzipLevel returns a Compressor with the specified level.
 func GzipLevel(level int) Compressor {
-	return &gzipCompressor{
-		level: level,
-	}
+	return &gzipCompressor{level: level}
 }
 
-// GzipRequired forces the Compressor to only allow gzipped data to be decompressed.
-//
-// Refer to compress/gzip.DefaultCompression and other values for more details on levels.
+// GzipRequired returns a Compressor that rejects non-gzipped input.
 func GzipRequired(level int) Compressor {
 	return &gzipCompressor{
 		strict: true,
@@ -53,26 +79,47 @@ func GzipRequired(level int) Compressor {
 	}
 }
 
+// getPoolIndex normalizes the compression level to a valid pool index (0-9).
+// DefaultCompression (-1) maps to 6 (the internal default level in flate).
+func (g *gzipCompressor) getPoolIndex() int {
+	l := g.level
+	if l == gzip.DefaultCompression {
+		l = 6
+	}
+	if l < 0 || l > 9 {
+		l = 6 // fallback for invalid levels
+	}
+	return l
+}
+
 func (g *gzipCompressor) compress(data []byte) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
 
+	once.Do(initPools)
+
+	idx := g.getPoolIndex()
+	w, ok := gzipWriterPools[idx].Get().(*gzip.Writer)
+	if !ok {
+		var err error
+		w, err = gzip.NewWriterLevel(io.Discard, idx)
+		if err != nil {
+			return nil, fmt.Errorf("new gzip writer: %v", err)
+		}
+	}
+	defer gzipWriterPools[idx].Put(w)
+
 	var buf bytes.Buffer
-	w, err := gzip.NewWriterLevel(&buf, g.level)
-	if err != nil {
-		return nil, fmt.Errorf("gzip writer (level=%d) create: %w", g.level, err)
-	}
+	w.Reset(&buf)
 
-	_, err = w.Write(data)
-	if err != nil {
+	if _, err := w.Write(data); err != nil {
+		// Close is safe to call even on error path
 		w.Close()
-		return nil, fmt.Errorf("gzip compress: %w", err)
+		return nil, fmt.Errorf("gzip compress write: %w", err)
 	}
-
-	err = w.Close()
-	if err != nil {
-		return nil, fmt.Errorf("gzip writer close: %w", err)
+	if err := w.Close(); err != nil {
+		return nil, fmt.Errorf("gzip compress close: %w", err)
 	}
 
 	return buf.Bytes(), nil
@@ -83,24 +130,39 @@ func (g *gzipCompressor) decompress(data []byte) ([]byte, error) {
 		return nil, nil
 	}
 
-	r, err := gzip.NewReader(bytes.NewReader(data))
-	if err != nil {
+	once.Do(initPools)
+
+	idx := g.getPoolIndex()
+	r, ok := gzipReaderPools[idx].Get().(*gzip.Reader)
+	if !ok {
+		r = &gzip.Reader{} // empty, .Reset() will fix
+	}
+	defer gzipReaderPools[idx].Put(r)
+
+	// Reset the pooled reader with the input data.
+	// For non-gzip input in !strict mode, this returns gzip.ErrHeader.
+	if err := r.Reset(bytes.NewReader(data)); err != nil {
 		if g.strict {
-			return nil, fmt.Errorf("gzip strict reader: %w", err)
+			return nil, fmt.Errorf("gzip strict reset: %w", err)
 		}
-		if !g.strict && err == gzip.ErrHeader {
+		if err == gzip.ErrHeader {
+			// Match original behavior: return input data directly (no copy)
+			// for non-gzipped content in non-strict mode.
 			return data, nil
 		}
+		return nil, fmt.Errorf("gzip reset: %w", err)
 	}
 
-	bs, err := io.ReadAll(r)
-	if err != nil {
+	// Read into a fresh buffer (the real decompression output)
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, r); err != nil {
 		r.Close()
-		return nil, fmt.Errorf("gzip read: %w", err)
+		return nil, fmt.Errorf("gzip decompress copy: %w", err)
 	}
-	err = r.Close()
-	if err != nil {
-		return nil, fmt.Errorf("gzip read close: %w", err)
+
+	if err := r.Close(); err != nil {
+		return nil, fmt.Errorf("gzip decompress close: %w", err)
 	}
-	return bs, nil
+
+	return out.Bytes(), nil
 }
