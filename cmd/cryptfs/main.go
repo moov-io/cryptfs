@@ -102,7 +102,7 @@ func setupOutput(flagValue string) io.WriteCloser {
 		log.Fatalf("ERROR opening %s -- %v", flagValue, err)
 	}
 	if *flagVerbose {
-		log.Printf("DEBUG Preparing %s for output", fd.Name())
+		log.Printf("DEBUG Preparing %s for output", fd.Name()) // #nosec G706
 	}
 	return fd
 }
