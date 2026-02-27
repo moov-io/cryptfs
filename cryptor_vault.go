@@ -46,7 +46,12 @@ type KubernetesConfig struct {
 	Path string `json:"path" yaml:"path"`
 }
 
-func NewVaultCryptor(conf VaultConfig) (*VaultCryptor, error) {
+type vaultClient struct {
+	client *api.Client
+	config VaultConfig
+}
+
+func newVaultClient(conf VaultConfig) (*vaultClient, error) {
 	vaultConf := api.DefaultConfig()
 	vaultConf.Address = conf.Address
 	vaultConf.HttpClient = &http.Client{
@@ -58,8 +63,7 @@ func NewVaultCryptor(conf VaultConfig) (*VaultCryptor, error) {
 		return nil, fmt.Errorf("creating vault client: %w", err)
 	}
 
-	// Verify the Vault client is healthy
-	vc := &VaultCryptor{
+	vc := &vaultClient{
 		client: client,
 		config: conf,
 	}
@@ -73,42 +77,46 @@ func NewVaultCryptor(conf VaultConfig) (*VaultCryptor, error) {
 	return vc, nil
 }
 
-type VaultCryptor struct {
-	client *api.Client
-	config VaultConfig
-}
-
-func (v *VaultCryptor) auth() error {
-	return v.config.authenticate(v.client)
-}
-
-func (conf VaultConfig) authenticate(client *api.Client) error {
-	if conf.Kubernetes != nil {
-		bs, err := os.ReadFile(conf.Kubernetes.Path)
+func (vc *vaultClient) auth() error {
+	if vc.config.Kubernetes != nil {
+		bs, err := os.ReadFile(vc.config.Kubernetes.Path)
 		if err != nil {
 			return fmt.Errorf("problem reading kubernetes path: %w", err)
 		}
-		client.SetToken(string(bs))
+		vc.client.SetToken(string(bs))
 		return nil
 	}
-	if conf.Token != nil {
-		client.SetToken(conf.Token.Token)
+	if vc.config.Token != nil {
+		vc.client.SetToken(vc.config.Token.Token)
 		return nil
 	}
 	return errors.New("must specified a auth configuration")
 }
 
-func (v *VaultCryptor) Healthy() error {
-	if err := v.auth(); err != nil {
+func (vc *vaultClient) Healthy() error {
+	if err := vc.auth(); err != nil {
 		return err
 	}
 
-	_, err := v.client.Sys().Health()
+	_, err := vc.client.Sys().Health()
 	if err != nil {
 		return fmt.Errorf("checking Vault health: %v", err)
 	}
 
 	return nil
+}
+
+func NewVaultCryptor(conf VaultConfig) (*VaultCryptor, error) {
+	vc, err := newVaultClient(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &VaultCryptor{vaultClient: vc}, nil
+}
+
+type VaultCryptor struct {
+	*vaultClient
 }
 
 func (v *VaultCryptor) encrypt(plaintext []byte) ([]byte, error) {
