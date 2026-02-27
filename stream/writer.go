@@ -68,7 +68,7 @@ func (cw *chunkWriter) flushChunk() error {
 
 	// Write 4-byte chunk length
 	var lenBuf [4]byte
-	binary.BigEndian.PutUint32(lenBuf[:], uint32(len(chunk)))
+	binary.BigEndian.PutUint32(lenBuf[:], uint32(len(chunk))) //nolint:gosec // chunk size bounded by chunkSize + GCM overhead
 	if _, err := cw.dst.Write(lenBuf[:]); err != nil {
 		return fmt.Errorf("writing chunk length: %w", err)
 	}

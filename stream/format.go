@@ -81,7 +81,7 @@ func headerBytes(h *fileHeader) []byte {
 	bs[4] = h.Version
 	bs[5] = h.Flags
 	copy(bs[6:13], h.NoncePrefix[:])
-	binary.BigEndian.PutUint16(bs[13:15], uint16(wkLen))
+	binary.BigEndian.PutUint16(bs[13:15], uint16(wkLen)) //nolint:gosec // wkLen is bounded by wrapped key size
 
 	if wkLen > 0 {
 		copy(bs[fixedHeaderSize:], h.WrappedKey)
@@ -98,10 +98,10 @@ func buildNonce(prefix [noncePrefixSize]byte, counter uint64) [nonceSize]byte {
 	// plus 5 bytes of counter (unique per chunk). 5 bytes = 40 bits = ~1 trillion chunks,
 	// which at 64KB each covers files up to 64 PB. Big-endian is a convention for binary
 	// protocols (most significant byte first) — either endianness would work.
-	nonce[7] = byte(counter >> 32)
-	nonce[8] = byte(counter >> 24)
-	nonce[9] = byte(counter >> 16)
-	nonce[10] = byte(counter >> 8)
-	nonce[11] = byte(counter)
+	nonce[7] = byte(counter >> 32) //nolint:gosec // intentional truncation to extract byte
+	nonce[8] = byte(counter >> 24) //nolint:gosec // intentional truncation to extract byte
+	nonce[9] = byte(counter >> 16) //nolint:gosec // intentional truncation to extract byte
+	nonce[10] = byte(counter >> 8) //nolint:gosec // intentional truncation to extract byte
+	nonce[11] = byte(counter)      //nolint:gosec // intentional truncation to extract byte
 	return nonce
 }
