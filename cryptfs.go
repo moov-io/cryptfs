@@ -80,7 +80,7 @@ func (fsys *FS) SetHMACKey(key []byte) {
 	}
 }
 
-// Looking at these changes, I'm not sure that it makes sense to use FS type
+// Looking at the changes below, I'm not sure that it makes sense to use FS type
 // as we technically add keyprovider and constructors for Reader and Writer.
 // maybe new type for StreamFS will be better?
 func (fsys *FS) SetKeyProvider(kp KeyProvider) {
@@ -94,6 +94,12 @@ func (fsys *FS) SetChunkSize(size int) {
 		fsys.chunkSize = size
 	}
 }
+
+// My concern here is that we add NewWriter and NewReader to the FS struct, which is primarily designed for file-based operations. This could blur the lines between file-based and stream-based operations, making the API less intuitive. It might be better to have a separate struct or interface for stream-based encryption/decryption, which can then be used in conjunction with FS for file operations. This way, we maintain a clear separation of concerns and keep the API more organized and easier to understand for users who may only be interested in file-based operations.
+
+// Or we may update ReadFile and WriteFile to somehow support streaming under the hood?
+// I think that streaming will work with files if you open file and pass the file (which implements io.Reader/io.Writer) to NewReader/NewWriter. So we can keep the streaming API separate and users can choose to use it directly for streams or indirectly through file operations.
+// Let's just think what is the best way to expose streaming capabilities without making the API too complex or confusing. Maybe we can have a StreamFS struct that embeds FS and adds NewReader/NewWriter methods, so users can choose to use StreamFS for streaming operations and FS for file-based operations. This way we maintain a clear separation of concerns while still providing access to streaming functionality when needed.
 
 // NewWriter returns a streaming encryption writer. Data written to the returned
 // Writer is compressed (if configured), encrypted in chunks, and written to dst.
@@ -123,7 +129,7 @@ func (fsys *FS) NewWriter(dst io.Writer) (*Writer, error) {
 	h := &fileHeader{
 		Version:     formatVersion,
 		Flags:       flags,
-		NoncePrefix: prefix,
+		NoncePrefix: prefix, // is it safe to store the nonce prefix in the header? Why? What's the goal of it?
 		WrappedKey:  dk.WrappedKey,
 	}
 

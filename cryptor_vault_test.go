@@ -128,6 +128,7 @@ func TestVaultDataKey(t *testing.T) {
 	require.Equal(t, original, got)
 }
 
+// how is that that docker is not supported? we run make setup in our tests - and it starts vault in a docker container
 func shouldSkipDockerTest(t *testing.T) {
 	t.Helper()
 

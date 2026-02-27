@@ -143,7 +143,7 @@ r.Close()
 <details>
 <summary>Vault envelope encryption</summary>
 
-When configured with Vault, `FromConfig` automatically sets up both the legacy `Cryptor` and the streaming `KeyProvider`. Each call to `NewWriter` generates a fresh data key via Vault Transit — the plaintext key encrypts locally, and only the wrapped key is stored in the file header.
+When configured with Vault, `FromConfig` automatically sets up both the legacy `Cryptor` and the streaming `KeyProvider`. Each call to `NewWriter` generates a fresh [data key](https://developer.hashicorp.com/vault/tutorials/encryption-as-a-service/eaas-transit#why-would-i-need-the-data-key) via Vault Transit — the plaintext key encrypts locally, and only the wrapped key is stored in the file header.
 
 ```go
 fsys, err := cryptfs.FromConfig(conf) // conf.Encryption.Vault is set
