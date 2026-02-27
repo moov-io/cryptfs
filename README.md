@@ -146,7 +146,10 @@ import (
 )
 
 // Set up Vault key provider
-kp := cryptfs.NewVaultKeyProvider(vaultClient, vaultConf)
+kp, err := cryptfs.NewVaultKeyProvider(vaultConf)
+if err != nil {
+    // do something
+}
 
 // Write — generates a Vault data key, encrypts locally
 w, err := stream.NewWriter(destination, kp)
