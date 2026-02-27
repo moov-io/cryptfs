@@ -1,6 +1,7 @@
 package cryptfs
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -39,12 +40,15 @@ func writeHeader(w io.Writer, h *fileHeader) error {
 }
 
 func readHeader(r io.Reader) (*fileHeader, []byte, error) {
+	// readHeader is only called after the caller has already confirmed the CRFS
+	// magic (e.g. Reveal checks the first 4 bytes before delegating here), so
+	// consuming bytes from the reader is safe — we know it's the new format.
 	var fixed [fixedHeaderSize]byte
 	if _, err := io.ReadFull(r, fixed[:]); err != nil {
 		return nil, nil, fmt.Errorf("reading header: %w", err)
 	}
 
-	if fixed[0] != magic[0] || fixed[1] != magic[1] || fixed[2] != magic[2] || fixed[3] != magic[3] {
+	if !bytes.Equal(fixed[0:4], magic[:]) {
 		return nil, nil, errors.New("invalid magic bytes")
 	}
 	if fixed[4] != formatVersion {
@@ -90,7 +94,10 @@ func buildNonce(prefix [noncePrefixSize]byte, counter uint64) [nonceSize]byte {
 	var nonce [nonceSize]byte
 	copy(nonce[:noncePrefixSize], prefix[:])
 
-	// 5-byte big-endian counter in bytes 7..11
+	// AES-GCM needs a 12-byte nonce. We use 7 bytes of random prefix (unique per file)
+	// plus 5 bytes of counter (unique per chunk). 5 bytes = 40 bits = ~1 trillion chunks,
+	// which at 64KB each covers files up to 64 PB. Big-endian is a convention for binary
+	// protocols (most significant byte first) — either endianness would work.
 	nonce[7] = byte(counter >> 32)
 	nonce[8] = byte(counter >> 24)
 	nonce[9] = byte(counter >> 16)

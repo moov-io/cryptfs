@@ -81,6 +81,10 @@ func (cr *chunkReader) readNextChunk() error {
 		return fmt.Errorf("nonce counter mismatch at chunk %d", cr.counter)
 	}
 
+	// For chunk 0, pass the serialized header as AAD (Additional Authenticated Data).
+	// GCM.Open will recompute the auth tag using this AAD and fail if it doesn't match
+	// what was used during Seal — this cryptographically binds the header to the data,
+	// so any tampering with flags, nonce prefix, or wrapped key causes decryption to fail.
 	var aad []byte
 	if cr.counter == 0 {
 		aad = cr.headerAAD

@@ -14,7 +14,7 @@ type chunkWriter struct {
 	dst         io.Writer
 	gcm         cipher.AEAD
 	noncePrefix [noncePrefixSize]byte
-	headerAAD   []byte // serialized header, AAD for first chunk only
+	headerAAD   []byte // serialized header, AAD (Additional Authorization Data) for first chunk only
 	buf         []byte
 	chunkSize   int
 	counter     uint64
