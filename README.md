@@ -39,11 +39,15 @@ cryptfs is included in multiple open-source projects Moov offers and is used in 
 
 Cryptfs supports AES and GPG for encryption and Base64 (Standard Raw) encoding. Currently cryptfs is usable as a Go library in your applications. This needs to be initialized prior to reading or writing any files.
 
+### In-memory API (`Disfigure` / `Reveal`)
+
+The original `[]byte`-based API encrypts and decrypts data entirely in memory.
+
 <details>
 <summary>AES Cryptor</summary>
 
 ```go
-key := []byte("1234567812345678")) // insecure key
+key := []byte("1234567812345678") // insecure key
 
 fsys, err := cryptfs.FromCryptor(cryptfs.NewAESCryptor(key))
 if err != nil {
@@ -94,6 +98,122 @@ if err != nil {
     // do something
 }
 ```
+
+### Streaming API (`NewWriter` / `NewReader`)
+
+The streaming API encrypts and decrypts data in fixed-size chunks (default 64KB), keeping memory usage bounded regardless of file size. This is ideal for use with cloud storage (e.g. `gocloud.dev/blob`) or any `io.Writer`/`io.Reader` pipeline.
+
+The streaming format (CRFS) uses AES-GCM with per-file data keys, chunked encryption, and optional gzip compression. When using Vault, this enables **envelope encryption** — Vault generates and wraps data keys but plaintext never crosses the network.
+
+`Reveal` auto-detects the CRFS format header, so existing data encrypted with `Disfigure` continues to work without changes.
+
+<details>
+<summary>AES streaming</summary>
+
+```go
+key := []byte("1234567812345678")
+
+fsys, err := cryptfs.FromCryptor(cryptfs.NewAESCryptor(key))
+if err != nil {
+    // do something
+}
+fsys.SetKeyProvider(cryptfs.NewStaticKeyProvider(key))
+fsys.SetCompression(cryptfs.Gzip()) // optional
+
+// Encrypt
+var buf bytes.Buffer
+w, err := fsys.NewWriter(&buf)
+if err != nil {
+    // do something
+}
+io.Copy(w, sourceReader)
+w.Close()
+
+// Decrypt
+r, err := fsys.NewReader(bytes.NewReader(buf.Bytes()))
+if err != nil {
+    // do something
+}
+plaintext, _ := io.ReadAll(r)
+r.Close()
+```
+
+</details>
+
+<details>
+<summary>Vault envelope encryption</summary>
+
+When configured with Vault, `FromConfig` automatically sets up both the legacy `Cryptor` and the streaming `KeyProvider`. Each call to `NewWriter` generates a fresh data key via Vault Transit — the plaintext key encrypts locally, and only the wrapped key is stored in the file header.
+
+```go
+fsys, err := cryptfs.FromConfig(conf) // conf.Encryption.Vault is set
+if err != nil {
+    // do something
+}
+
+// Write — generates a Vault data key, encrypts locally
+w, err := fsys.NewWriter(destination)
+if err != nil {
+    // do something
+}
+io.Copy(w, sourceReader)
+w.Close()
+
+// Read — unwraps the data key via Vault, decrypts locally
+r, err := fsys.NewReader(source)
+if err != nil {
+    // do something
+}
+plaintext, _ := io.ReadAll(r)
+r.Close()
+```
+
+</details>
+
+<details>
+<summary>Streaming write to a cloud bucket</summary>
+
+```go
+func (bs *bucketStorage) Save(ctx context.Context, path string, file fs.File) error {
+    bw, err := bs.bucket.NewWriter(ctx, path, nil)
+    if err != nil {
+        return err
+    }
+    defer bw.Close()
+
+    ew, err := bs.security.NewWriter(bw)
+    if err != nil {
+        return err
+    }
+    if _, err := io.Copy(ew, file); err != nil {
+        return err
+    }
+    return ew.Close()
+}
+```
+
+</details>
+
+<details>
+<summary>Streaming read from a cloud bucket</summary>
+
+```go
+func (bs *bucketStorage) Read(ctx context.Context, path string) (io.ReadCloser, error) {
+    br, err := bs.bucket.NewReader(ctx, path, nil)
+    if err != nil {
+        return nil, err
+    }
+
+    dr, err := bs.security.NewReader(br)
+    if err != nil {
+        br.Close()
+        return nil, err
+    }
+    return dr, nil // Close() closes both dr and the underlying bucket reader
+}
+```
+
+</details>
 
 ## Command Line
 

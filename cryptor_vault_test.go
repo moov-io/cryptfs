@@ -18,12 +18,15 @@
 package cryptfs
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,6 +74,58 @@ func TestVaultCryptor(t *testing.T) {
 
 		testCryptFS(t, fsys)
 	})
+}
+
+func TestVaultDataKey(t *testing.T) {
+	shouldSkipDockerTest(t)
+
+	conf := VaultConfig{
+		Address: "http://localhost:8200",
+		Token:   &TokenConfig{Token: "myroot"},
+		KeyName: "testkey",
+	}
+
+	vaultConf := api.DefaultConfig()
+	vaultConf.Address = conf.Address
+	client, err := api.NewClient(vaultConf)
+	require.NoError(t, err)
+	client.SetToken("myroot")
+
+	kp := newVaultKeyProvider(client, conf)
+
+	// Generate a data key
+	dk, err := kp.GenerateKey()
+	require.NoError(t, err)
+	require.Len(t, dk.Plaintext, 32, "Vault default data key is 256-bit")
+	require.NotEmpty(t, dk.WrappedKey, "wrapped key should be non-empty")
+
+	// Unwrap it back
+	recovered, err := kp.UnwrapKey(dk.WrappedKey)
+	require.NoError(t, err)
+	require.Equal(t, dk.Plaintext, recovered, "unwrapped key must match original")
+
+	// Full streaming round-trip with Vault envelope encryption
+	fsys, err := FromCryptor(NewVaultCryptor(conf))
+	require.NoError(t, err)
+	fsys.SetKeyProvider(kp)
+	fsys.SetCompression(Gzip())
+
+	original := []byte("sensitive data for vault envelope test")
+
+	var buf bytes.Buffer
+	w, err := fsys.NewWriter(&buf)
+	require.NoError(t, err)
+	_, err = w.Write(original)
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	r, err := fsys.NewReader(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+	got, err := io.ReadAll(r)
+	require.NoError(t, err)
+	require.NoError(t, r.Close())
+
+	require.Equal(t, original, got)
 }
 
 func shouldSkipDockerTest(t *testing.T) {

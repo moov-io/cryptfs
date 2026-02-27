@@ -49,6 +49,7 @@ func FromConfig(conf Config) (*FS, error) {
 
 	// Encryption
 	cryptor := NoEncryption()
+	var keyProvider KeyProvider
 	switch {
 	case conf.Encryption.AES != nil:
 		var key []byte
@@ -61,6 +62,9 @@ func FromConfig(conf Config) (*FS, error) {
 			}
 		}
 		cryptor, err = NewAESCryptor(key)
+		if err == nil {
+			keyProvider = NewStaticKeyProvider(key)
+		}
 
 	case conf.Encryption.GPG != nil:
 		if conf.Encryption.GPG.PublicPath != "" && conf.Encryption.GPG.PrivatePath == "" {
@@ -76,7 +80,13 @@ func FromConfig(conf Config) (*FS, error) {
 		}
 
 	case conf.Encryption.Vault != nil:
-		cryptor, err = NewVaultCryptor(*conf.Encryption.Vault)
+		vc, vcErr := NewVaultCryptor(*conf.Encryption.Vault)
+		if vcErr != nil {
+			err = vcErr
+		} else {
+			cryptor = vc
+			keyProvider = newVaultKeyProvider(vc.client, *conf.Encryption.Vault)
+		}
 	}
 	if err != nil {
 		return nil, fmt.Errorf("cryptor from config: %w", err)
@@ -86,6 +96,10 @@ func FromConfig(conf Config) (*FS, error) {
 	fsys, err := New(cryptor)
 	if err != nil {
 		return nil, fmt.Errorf("cryptfs from config: %w", err)
+	}
+
+	if keyProvider != nil {
+		fsys.SetKeyProvider(keyProvider)
 	}
 
 	// Compression

@@ -79,16 +79,20 @@ type VaultCryptor struct {
 }
 
 func (v *VaultCryptor) auth() error {
-	if v.config.Kubernetes != nil {
-		bs, err := os.ReadFile(v.config.Kubernetes.Path)
+	return v.config.authenticate(v.client)
+}
+
+func (conf VaultConfig) authenticate(client *api.Client) error {
+	if conf.Kubernetes != nil {
+		bs, err := os.ReadFile(conf.Kubernetes.Path)
 		if err != nil {
 			return fmt.Errorf("problem reading kubernetes path: %w", err)
 		}
-		v.client.SetToken(string(bs))
+		client.SetToken(string(bs))
 		return nil
 	}
-	if v.config.Token != nil {
-		v.client.SetToken(v.config.Token.Token)
+	if conf.Token != nil {
+		client.SetToken(conf.Token.Token)
 		return nil
 	}
 	return errors.New("must specified a auth configuration")
