@@ -3,7 +3,6 @@ package cryptfs
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,13 +15,8 @@ func TestVaultKeyProvider(t *testing.T) {
 		KeyName: "testkey",
 	}
 
-	vaultConf := api.DefaultConfig()
-	vaultConf.Address = conf.Address
-	client, err := api.NewClient(vaultConf)
+	kp, err := NewVaultKeyProvider(conf)
 	require.NoError(t, err)
-	client.SetToken("myroot")
-
-	kp := NewVaultKeyProvider(client, conf)
 
 	t.Run("generate and unwrap", func(t *testing.T) {
 		dk, err := kp.GenerateKey()

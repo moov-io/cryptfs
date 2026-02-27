@@ -3,6 +3,8 @@ package cryptfs
 import (
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/moov-io/cryptfs/stream"
 
@@ -14,11 +16,44 @@ type vaultKeyProvider struct {
 	config VaultConfig
 }
 
-func NewVaultKeyProvider(client *api.Client, conf VaultConfig) stream.KeyProvider {
+func NewVaultKeyProvider(conf VaultConfig) (stream.KeyProvider, error) {
+	vaultConf := api.DefaultConfig()
+	vaultConf.Address = conf.Address
+	vaultConf.HttpClient = &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	client, err := api.NewClient(vaultConf)
+	if err != nil {
+		return nil, fmt.Errorf("creating vault client: %w", err)
+	}
+
+	// authenticate to verify the Vault client is healthy
+	if err := conf.authenticate(client); err != nil {
+		return nil, fmt.Errorf("unable to authenticate - %w", err)
+	}
+
 	return &vaultKeyProvider{
 		client: client,
 		config: conf,
+	}, nil
+}
+
+func (p *vaultKeyProvider) auth() error {
+	return p.config.authenticate(p.client)
+}
+
+func (p *vaultKeyProvider) Healthy() error {
+	if err := p.auth(); err != nil {
+		return err
 	}
+
+	_, err := p.client.Sys().Health()
+	if err != nil {
+		return fmt.Errorf("checking Vault health: %v", err)
+	}
+
+	return nil
 }
 
 func (p *vaultKeyProvider) GenerateKey() (*stream.DataKey, error) {

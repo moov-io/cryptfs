@@ -28,7 +28,6 @@ import (
 
 	"github.com/moov-io/cryptfs/stream"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,13 +86,8 @@ func TestVaultDataKey(t *testing.T) {
 		KeyName: "testkey",
 	}
 
-	vaultConf := api.DefaultConfig()
-	vaultConf.Address = conf.Address
-	client, err := api.NewClient(vaultConf)
+	kp, err := NewVaultKeyProvider(conf)
 	require.NoError(t, err)
-	client.SetToken("myroot")
-
-	kp := NewVaultKeyProvider(client, conf)
 
 	// Generate a data key
 	dk, err := kp.GenerateKey()
