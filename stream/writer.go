@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -52,6 +53,10 @@ func (cw *chunkWriter) Write(p []byte) (int, error) {
 func (cw *chunkWriter) flushChunk() error {
 	if len(cw.buf) == 0 {
 		return nil
+	}
+
+	if cw.counter >= 1<<40 {
+		return errors.New("maximum chunk count exceeded to prevent nonce reuse")
 	}
 
 	nonce := buildNonce(cw.noncePrefix, cw.counter)

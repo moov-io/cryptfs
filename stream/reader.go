@@ -63,6 +63,10 @@ func (cr *chunkReader) readNextChunk() error {
 		return nil
 	}
 
+	if cr.counter >= 1<<40 {
+		return errors.New("maximum chunk count exceeded to prevent nonce reuse")
+	}
+
 	// Read the chunk (nonce + ciphertext + tag)
 	chunk := make([]byte, chunkLen)
 	if _, err := io.ReadFull(cr.src, chunk); err != nil {
@@ -128,6 +132,10 @@ func NewReader(src io.Reader, kp KeyProvider) (*Reader, error) {
 			return nil, fmt.Errorf("getting key: %w", err)
 		}
 		key = dk.Plaintext
+	}
+
+	if key == nil {
+		return nil, fmt.Errorf("no key provided")
 	}
 
 	compress := h.Flags&flagGzip != 0

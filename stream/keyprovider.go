@@ -1,5 +1,9 @@
 package stream
 
+import (
+	"errors"
+)
+
 // DataKey holds a plaintext AES key and its wrapped (encrypted) form.
 // For direct AES (staticKeyProvider), WrappedKey is nil.
 // For Vault envelope encryption, WrappedKey is the Vault-encrypted data key.
@@ -29,6 +33,9 @@ func (p *staticKeyProvider) GenerateKey() (*DataKey, error) {
 	return &DataKey{Plaintext: p.key}, nil
 }
 
-func (p *staticKeyProvider) UnwrapKey(_ []byte) ([]byte, error) {
+func (p *staticKeyProvider) UnwrapKey(wrappedKey []byte) ([]byte, error) {
+	if len(wrappedKey) > 0 {
+		return nil, errors.New("static key provider cannot unwrap keys")
+	}
 	return p.key, nil
 }
