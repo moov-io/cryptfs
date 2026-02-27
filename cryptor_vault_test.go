@@ -26,6 +26,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moov-io/cryptfs/stream"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 )
@@ -91,7 +93,7 @@ func TestVaultDataKey(t *testing.T) {
 	require.NoError(t, err)
 	client.SetToken("myroot")
 
-	kp := newVaultKeyProvider(client, conf)
+	kp := NewVaultKeyProvider(client, conf)
 
 	// Generate a data key
 	dk, err := kp.GenerateKey()
@@ -105,21 +107,16 @@ func TestVaultDataKey(t *testing.T) {
 	require.Equal(t, dk.Plaintext, recovered, "unwrapped key must match original")
 
 	// Full streaming round-trip with Vault envelope encryption
-	fsys, err := FromCryptor(NewVaultCryptor(conf))
-	require.NoError(t, err)
-	fsys.SetKeyProvider(kp)
-	fsys.SetCompression(Gzip())
-
 	original := []byte("sensitive data for vault envelope test")
 
 	var buf bytes.Buffer
-	w, err := fsys.NewWriter(&buf)
+	w, err := stream.NewWriter(&buf, kp, stream.WithCompression())
 	require.NoError(t, err)
 	_, err = w.Write(original)
 	require.NoError(t, err)
 	require.NoError(t, w.Close())
 
-	r, err := fsys.NewReader(bytes.NewReader(buf.Bytes()))
+	r, err := stream.NewReader(bytes.NewReader(buf.Bytes()), kp)
 	require.NoError(t, err)
 	got, err := io.ReadAll(r)
 	require.NoError(t, err)

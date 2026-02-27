@@ -1,4 +1,4 @@
-package cryptfs
+package stream
 
 import (
 	"bytes"
@@ -129,6 +129,65 @@ func TestWriterWrongKey(t *testing.T) {
 	_, err = io.ReadAll(r)
 	// Reading will eventually fail because the test reader doesn't use the chunk reader
 	// The real test for wrong-key is in reader_test.go
+}
+
+func TestNewWriterRoundTrip(t *testing.T) {
+	key := []byte("1234567890123456")
+	kp := NewStaticKeyProvider(key)
+
+	t.Run("without compression", func(t *testing.T) {
+		original := []byte("hello, streaming world")
+
+		var buf bytes.Buffer
+		w, err := NewWriter(&buf, kp)
+		require.NoError(t, err)
+		_, err = w.Write(original)
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		r, err := NewReader(bytes.NewReader(buf.Bytes()), kp)
+		require.NoError(t, err)
+		got, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.NoError(t, r.Close())
+		require.Equal(t, original, got)
+	})
+
+	t.Run("with compression", func(t *testing.T) {
+		original := []byte(bytes.Repeat([]byte("hello world "), 10_000))
+
+		var buf bytes.Buffer
+		w, err := NewWriter(&buf, kp, WithCompression())
+		require.NoError(t, err)
+		_, err = w.Write(original)
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		r, err := NewReader(bytes.NewReader(buf.Bytes()), kp)
+		require.NoError(t, err)
+		got, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.NoError(t, r.Close())
+		require.Equal(t, original, got)
+	})
+
+	t.Run("with custom chunk size", func(t *testing.T) {
+		original := []byte("The quick brown fox jumps over the lazy dog")
+
+		var buf bytes.Buffer
+		w, err := NewWriter(&buf, kp, WithChunkSize(10))
+		require.NoError(t, err)
+		_, err = w.Write(original)
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		r, err := NewReader(bytes.NewReader(buf.Bytes()), kp)
+		require.NoError(t, err)
+		got, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.NoError(t, r.Close())
+		require.Equal(t, original, got)
+	})
 }
 
 func writeTestData(t *testing.T, key, data []byte, compress bool, chunkSize int) *bytes.Buffer {

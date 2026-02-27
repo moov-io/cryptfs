@@ -1,4 +1,4 @@
-package cryptfs
+package stream
 
 import (
 	"compress/gzip"
@@ -105,6 +105,33 @@ type Reader struct {
 	chunks     *chunkReader
 	gzipReader *gzip.Reader // nil if no compression
 	closer     io.Closer    // underlying source to close
+}
+
+// NewReader returns a streaming decryption reader. It reads the CRFS header,
+// unwraps the data key, and returns a reader that decrypts and decompresses on Read.
+// The caller must call Close on the returned Reader.
+func NewReader(src io.Reader, kp KeyProvider) (*Reader, error) {
+	h, aad, err := readHeader(src)
+	if err != nil {
+		return nil, fmt.Errorf("reading header: %w", err)
+	}
+
+	var key []byte
+	if len(h.WrappedKey) > 0 {
+		key, err = kp.UnwrapKey(h.WrappedKey)
+		if err != nil {
+			return nil, fmt.Errorf("unwrapping data key: %w", err)
+		}
+	} else {
+		dk, err := kp.GenerateKey()
+		if err != nil {
+			return nil, fmt.Errorf("getting key: %w", err)
+		}
+		key = dk.Plaintext
+	}
+
+	compress := h.Flags&flagGzip != 0
+	return newReader(src, key, aad, compress)
 }
 
 func newReader(src io.Reader, key []byte, headerAAD []byte, compress bool) (*Reader, error) {

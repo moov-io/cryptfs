@@ -1,4 +1,4 @@
-package cryptfs
+package stream
 
 // DataKey holds a plaintext AES key and its wrapped (encrypted) form.
 // For direct AES (staticKeyProvider), WrappedKey is nil.

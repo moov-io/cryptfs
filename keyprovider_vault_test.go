@@ -22,7 +22,7 @@ func TestVaultKeyProvider(t *testing.T) {
 	require.NoError(t, err)
 	client.SetToken("myroot")
 
-	kp := newVaultKeyProvider(client, conf)
+	kp := NewVaultKeyProvider(client, conf)
 
 	t.Run("generate and unwrap", func(t *testing.T) {
 		dk, err := kp.GenerateKey()

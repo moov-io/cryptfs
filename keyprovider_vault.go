@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/moov-io/cryptfs/stream"
+
 	"github.com/hashicorp/vault/api"
 )
 
@@ -12,14 +14,14 @@ type vaultKeyProvider struct {
 	config VaultConfig
 }
 
-func newVaultKeyProvider(client *api.Client, conf VaultConfig) KeyProvider {
+func NewVaultKeyProvider(client *api.Client, conf VaultConfig) stream.KeyProvider {
 	return &vaultKeyProvider{
 		client: client,
 		config: conf,
 	}
 }
 
-func (p *vaultKeyProvider) GenerateKey() (*DataKey, error) {
+func (p *vaultKeyProvider) GenerateKey() (*stream.DataKey, error) {
 	if err := p.config.authenticate(p.client); err != nil {
 		return nil, err
 	}
@@ -48,7 +50,7 @@ func (p *vaultKeyProvider) GenerateKey() (*DataKey, error) {
 		return nil, fmt.Errorf("casting ciphertext key to string from %T", res.Data["ciphertext"])
 	}
 
-	return &DataKey{
+	return &stream.DataKey{
 		Plaintext:  plaintext,
 		WrappedKey: []byte(ciphertext),
 	}, nil

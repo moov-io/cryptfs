@@ -1,9 +1,10 @@
-package cryptfs
+package stream
 
 import (
 	"compress/gzip"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -99,6 +100,44 @@ func (cw *chunkWriter) Close() error {
 type Writer struct {
 	chunks     *chunkWriter
 	gzipWriter *gzip.Writer // nil if no compression
+}
+
+// NewWriter returns a streaming encryption writer. Data written to the returned
+// Writer is compressed (if configured), encrypted in chunks, and written to dst.
+// The caller must call Close on the returned Writer to finalize the stream.
+func NewWriter(dst io.Writer, kp KeyProvider, opts ...Option) (*Writer, error) {
+	o := options{}
+	for _, fn := range opts {
+		fn(&o)
+	}
+
+	dk, err := kp.GenerateKey()
+	if err != nil {
+		return nil, fmt.Errorf("generating data key: %w", err)
+	}
+
+	var prefix [noncePrefixSize]byte
+	if _, err := rand.Read(prefix[:]); err != nil {
+		return nil, fmt.Errorf("generating nonce prefix: %w", err)
+	}
+
+	var flags byte
+	if o.compress {
+		flags |= flagGzip
+	}
+
+	h := &fileHeader{
+		Version:     formatVersion,
+		Flags:       flags,
+		NoncePrefix: prefix,
+		WrappedKey:  dk.WrappedKey,
+	}
+
+	if err := writeHeader(dst, h); err != nil {
+		return nil, fmt.Errorf("writing header: %w", err)
+	}
+
+	return newWriter(dst, dk.Plaintext, h, o.compress, o.chunkSize)
 }
 
 func newWriter(dst io.Writer, key []byte, h *fileHeader, compress bool, chunkSize int) (*Writer, error) {

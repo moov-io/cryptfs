@@ -18,13 +18,10 @@
 package cryptfs
 
 import (
-	"bytes"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 )
@@ -34,9 +31,7 @@ type FS struct {
 	cryptor    Cryptor
 	coder      Coder
 
-	hmacKey     []byte
-	keyProvider KeyProvider // nil = streaming not available (GPG-only)
-	chunkSize   int         // 0 = DefaultChunkSize
+	hmacKey []byte
 }
 
 // New returns a FS instance with the specified Cryptor used for all operations.
@@ -80,102 +75,6 @@ func (fsys *FS) SetHMACKey(key []byte) {
 	}
 }
 
-// Looking at the changes below, I'm not sure that it makes sense to use FS type
-// as we technically add keyprovider and constructors for Reader and Writer.
-// maybe new type for StreamFS will be better?
-func (fsys *FS) SetKeyProvider(kp KeyProvider) {
-	if fsys != nil {
-		fsys.keyProvider = kp
-	}
-}
-
-func (fsys *FS) SetChunkSize(size int) {
-	if fsys != nil {
-		fsys.chunkSize = size
-	}
-}
-
-// My concern here is that we add NewWriter and NewReader to the FS struct, which is primarily designed for file-based operations. This could blur the lines between file-based and stream-based operations, making the API less intuitive. It might be better to have a separate struct or interface for stream-based encryption/decryption, which can then be used in conjunction with FS for file operations. This way, we maintain a clear separation of concerns and keep the API more organized and easier to understand for users who may only be interested in file-based operations.
-
-// Or we may update ReadFile and WriteFile to somehow support streaming under the hood?
-// I think that streaming will work with files if you open file and pass the file (which implements io.Reader/io.Writer) to NewReader/NewWriter. So we can keep the streaming API separate and users can choose to use it directly for streams or indirectly through file operations.
-// Let's just think what is the best way to expose streaming capabilities without making the API too complex or confusing. Maybe we can have a StreamFS struct that embeds FS and adds NewReader/NewWriter methods, so users can choose to use StreamFS for streaming operations and FS for file-based operations. This way we maintain a clear separation of concerns while still providing access to streaming functionality when needed.
-
-// NewWriter returns a streaming encryption writer. Data written to the returned
-// Writer is compressed (if configured), encrypted in chunks, and written to dst.
-// The caller must call Close on the returned Writer to finalize the stream.
-func (fsys *FS) NewWriter(dst io.Writer) (*Writer, error) {
-	if fsys.keyProvider == nil {
-		return nil, errors.New("no key provider configured; use SetKeyProvider")
-	}
-
-	dk, err := fsys.keyProvider.GenerateKey()
-	if err != nil {
-		return nil, fmt.Errorf("generating data key: %w", err)
-	}
-
-	var prefix [noncePrefixSize]byte
-	if _, err := rand.Read(prefix[:]); err != nil {
-		return nil, fmt.Errorf("generating nonce prefix: %w", err)
-	}
-
-	compress := isGzip(fsys.compressor)
-
-	var flags byte
-	if compress {
-		flags |= flagGzip
-	}
-
-	h := &fileHeader{
-		Version:     formatVersion,
-		Flags:       flags,
-		NoncePrefix: prefix, // is it safe to store the nonce prefix in the header? Why? What's the goal of it?
-		WrappedKey:  dk.WrappedKey,
-	}
-
-	if err := writeHeader(dst, h); err != nil {
-		return nil, fmt.Errorf("writing header: %w", err)
-	}
-
-	return newWriter(dst, dk.Plaintext, h, compress, fsys.chunkSize)
-}
-
-// NewReader returns a streaming decryption reader. It reads the CRFS header,
-// unwraps the data key, and returns a reader that decrypts and decompresses on Read.
-// The caller must call Close on the returned Reader.
-func (fsys *FS) NewReader(src io.Reader) (*Reader, error) {
-	if fsys.keyProvider == nil {
-		return nil, errors.New("no key provider configured; use SetKeyProvider")
-	}
-
-	h, aad, err := readHeader(src)
-	if err != nil {
-		return nil, fmt.Errorf("reading header: %w", err)
-	}
-
-	var key []byte
-	if len(h.WrappedKey) > 0 {
-		key, err = fsys.keyProvider.UnwrapKey(h.WrappedKey)
-		if err != nil {
-			return nil, fmt.Errorf("unwrapping data key: %w", err)
-		}
-	} else {
-		dk, err := fsys.keyProvider.GenerateKey()
-		if err != nil {
-			return nil, fmt.Errorf("getting key: %w", err)
-		}
-		key = dk.Plaintext
-	}
-
-	compress := h.Flags&flagGzip != 0
-	return newReader(src, key, aad, compress)
-}
-
-func isGzip(c Compressor) bool {
-	_, ok := c.(*gzipCompressor)
-	return ok
-}
-
 // Open will open a file at the given name
 func (fsys *FS) Open(name string) (fs.File, error) {
 	fd, err := os.Open(name)
@@ -186,28 +85,7 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 }
 
 // Reveal will decode and then decrypt the bytes its given.
-// If the data starts with the CRFS magic header, it is decoded using the
-// streaming reader (requires a KeyProvider to be configured).
 func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
-	// Auto-detect new CRFS format
-	if len(encodedBytes) >= 4 && bytes.Equal(encodedBytes[:4], magic[:]) {
-		if fsys.keyProvider == nil {
-			return nil, errors.New("CRFS format detected but no key provider configured")
-		}
-		r, err := fsys.NewReader(bytes.NewReader(encodedBytes))
-		if err != nil {
-			return nil, fmt.Errorf("creating stream reader: %w", err)
-		}
-		plaintext, err := io.ReadAll(r)
-		if err != nil {
-			return nil, fmt.Errorf("reading stream: %w", err)
-		}
-		if err := r.Close(); err != nil {
-			return nil, fmt.Errorf("closing stream reader: %w", err)
-		}
-		return plaintext, nil
-	}
-
 	bs, err := fsys.coder.decode(encodedBytes)
 	if err != nil {
 		return nil, fmt.Errorf("decoding: %w", err)

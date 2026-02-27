@@ -18,9 +18,7 @@
 package cryptfs
 
 import (
-	"bytes"
 	"compress/gzip"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -170,133 +168,6 @@ func testCryptFS(t *testing.T, fsys *FS) {
 	bs, err = fsys.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(bs))
-}
-
-func TestStreamingRoundTrip_AES(t *testing.T) {
-	key := []byte(strings.Repeat("1", 16))
-
-	cc, err := NewAESCryptor(key)
-	require.NoError(t, err)
-
-	t.Run("without compression", func(t *testing.T) {
-		fsys, err := New(cc)
-		require.NoError(t, err)
-		fsys.SetKeyProvider(NewStaticKeyProvider(key))
-
-		original := []byte("hello, streaming world")
-
-		var buf bytes.Buffer
-		w, err := fsys.NewWriter(&buf)
-		require.NoError(t, err)
-		_, err = w.Write(original)
-		require.NoError(t, err)
-		require.NoError(t, w.Close())
-
-		r, err := fsys.NewReader(bytes.NewReader(buf.Bytes()))
-		require.NoError(t, err)
-		got, err := io.ReadAll(r)
-		require.NoError(t, err)
-		require.NoError(t, r.Close())
-		require.Equal(t, original, got)
-	})
-
-	t.Run("with compression", func(t *testing.T) {
-		fsys, err := New(cc)
-		require.NoError(t, err)
-		fsys.SetKeyProvider(NewStaticKeyProvider(key))
-		fsys.SetCompression(Gzip())
-
-		original := []byte(strings.Repeat("hello world ", 10_000))
-
-		var buf bytes.Buffer
-		w, err := fsys.NewWriter(&buf)
-		require.NoError(t, err)
-		_, err = w.Write(original)
-		require.NoError(t, err)
-		require.NoError(t, w.Close())
-
-		r, err := fsys.NewReader(bytes.NewReader(buf.Bytes()))
-		require.NoError(t, err)
-		got, err := io.ReadAll(r)
-		require.NoError(t, err)
-		require.NoError(t, r.Close())
-		require.Equal(t, original, got)
-	})
-
-	t.Run("no key provider", func(t *testing.T) {
-		fsys, err := New(cc)
-		require.NoError(t, err)
-
-		var buf bytes.Buffer
-		_, err = fsys.NewWriter(&buf)
-		require.ErrorContains(t, err, "no key provider configured")
-
-		_, err = fsys.NewReader(bytes.NewReader(buf.Bytes()))
-		require.ErrorContains(t, err, "no key provider configured")
-	})
-}
-
-func TestBackwardCompat_OldFormatReadByReveal(t *testing.T) {
-	key := []byte(strings.Repeat("1", 16))
-
-	cc, err := NewAESCryptor(key)
-	require.NoError(t, err)
-
-	fsys, err := New(cc)
-	require.NoError(t, err)
-	fsys.SetKeyProvider(NewStaticKeyProvider(key))
-
-	// Write old format
-	ciphertext, err := fsys.Disfigure([]byte("old data"))
-	require.NoError(t, err)
-
-	// Read with Reveal — still works (no CRFS header detected)
-	plaintext, err := fsys.Reveal(ciphertext)
-	require.NoError(t, err)
-	require.Equal(t, []byte("old data"), plaintext)
-
-	// Write new format
-	var buf bytes.Buffer
-	w, err := fsys.NewWriter(&buf)
-	require.NoError(t, err)
-	_, err = w.Write([]byte("new data"))
-	require.NoError(t, err)
-	require.NoError(t, w.Close())
-
-	// Read new format with Reveal — auto-detects CRFS header
-	plaintext, err = fsys.Reveal(buf.Bytes())
-	require.NoError(t, err)
-	require.Equal(t, []byte("new data"), plaintext)
-}
-
-func TestStreamingFromConfig_AES(t *testing.T) {
-	conf := Config{
-		Encryption: EncryptionConfig{
-			AES: &AESConfig{
-				Key: strings.Repeat("1", 16),
-			},
-		},
-	}
-
-	fsys, err := FromConfig(conf)
-	require.NoError(t, err)
-
-	// keyProvider should be auto-wired
-	original := []byte("streaming via config")
-
-	var buf bytes.Buffer
-	w, err := fsys.NewWriter(&buf)
-	require.NoError(t, err)
-	_, err = w.Write(original)
-	require.NoError(t, err)
-	require.NoError(t, w.Close())
-
-	r, err := fsys.NewReader(bytes.NewReader(buf.Bytes()))
-	require.NoError(t, err)
-	got, err := io.ReadAll(r)
-	require.NoError(t, err)
-	require.NoError(t, r.Close())
-	require.Equal(t, original, got)
 }
 
 func TestCryptfsError(t *testing.T) {

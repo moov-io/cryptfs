@@ -99,30 +99,24 @@ if err != nil {
 }
 ```
 
-### Streaming API (`NewWriter` / `NewReader`)
+### Streaming API (`stream.NewWriter` / `stream.NewReader`)
 
-The streaming API encrypts and decrypts data in fixed-size chunks (default 64KB), keeping memory usage bounded regardless of file size. This is ideal for use with cloud storage (e.g. `gocloud.dev/blob`) or any `io.Writer`/`io.Reader` pipeline.
+The `github.com/moov-io/cryptfs/stream` sub-package provides streaming encryption that works in fixed-size chunks (default 64KB), keeping memory usage bounded regardless of file size. This is ideal for use with cloud storage (e.g. `gocloud.dev/blob`) or any `io.Writer`/`io.Reader` pipeline.
 
-The streaming format (CRFS) uses AES-GCM with per-file data keys, chunked encryption, and optional gzip compression. When using Vault, this enables **envelope encryption** — Vault generates and wraps data keys but plaintext never crosses the network.
-
-`Reveal` auto-detects the CRFS format header, so existing data encrypted with `Disfigure` continues to work without changes.
+The streaming format (CRFS) uses AES-GCM with per-file data keys, chunked encryption, and optional gzip compression. When using Vault, this enables **envelope encryption** — Vault generates and wraps data keys, and all data encryption happens locally. The master key never leaves Vault.
 
 <details>
 <summary>AES streaming</summary>
 
 ```go
-key := []byte("1234567812345678")
+import "github.com/moov-io/cryptfs/stream"
 
-fsys, err := cryptfs.FromCryptor(cryptfs.NewAESCryptor(key))
-if err != nil {
-    // do something
-}
-fsys.SetKeyProvider(cryptfs.NewStaticKeyProvider(key))
-fsys.SetCompression(cryptfs.Gzip()) // optional
+key := []byte("1234567812345678")
+kp := stream.NewStaticKeyProvider(key)
 
 // Encrypt
 var buf bytes.Buffer
-w, err := fsys.NewWriter(&buf)
+w, err := stream.NewWriter(&buf, kp, stream.WithCompression()) // compression is optional
 if err != nil {
     // do something
 }
@@ -130,7 +124,7 @@ io.Copy(w, sourceReader)
 w.Close()
 
 // Decrypt
-r, err := fsys.NewReader(bytes.NewReader(buf.Bytes()))
+r, err := stream.NewReader(bytes.NewReader(buf.Bytes()), kp)
 if err != nil {
     // do something
 }
@@ -143,16 +137,19 @@ r.Close()
 <details>
 <summary>Vault envelope encryption</summary>
 
-When configured with Vault, `FromConfig` automatically sets up both the legacy `Cryptor` and the streaming `KeyProvider`. Each call to `NewWriter` generates a fresh [data key](https://developer.hashicorp.com/vault/tutorials/encryption-as-a-service/eaas-transit#why-would-i-need-the-data-key) via Vault Transit — the plaintext key encrypts locally, and only the wrapped key is stored in the file header.
+Each call to `stream.NewWriter` generates a fresh [data key](https://developer.hashicorp.com/vault/tutorials/encryption-as-a-service/eaas-transit#why-would-i-need-the-data-key) via Vault Transit — the plaintext key encrypts locally, and only the wrapped key is stored in the file header.
 
 ```go
-fsys, err := cryptfs.FromConfig(conf) // conf.Encryption.Vault is set
-if err != nil {
-    // do something
-}
+import (
+    "github.com/moov-io/cryptfs"
+    "github.com/moov-io/cryptfs/stream"
+)
+
+// Set up Vault key provider
+kp := cryptfs.NewVaultKeyProvider(vaultClient, vaultConf)
 
 // Write — generates a Vault data key, encrypts locally
-w, err := fsys.NewWriter(destination)
+w, err := stream.NewWriter(destination, kp)
 if err != nil {
     // do something
 }
@@ -160,7 +157,7 @@ io.Copy(w, sourceReader)
 w.Close()
 
 // Read — unwraps the data key via Vault, decrypts locally
-r, err := fsys.NewReader(source)
+r, err := stream.NewReader(source, kp)
 if err != nil {
     // do something
 }
@@ -181,7 +178,7 @@ func (bs *bucketStorage) Save(ctx context.Context, path string, file fs.File) er
     }
     defer bw.Close()
 
-    ew, err := bs.security.NewWriter(bw)
+    ew, err := stream.NewWriter(bw, bs.keyProvider)
     if err != nil {
         return err
     }
@@ -204,7 +201,7 @@ func (bs *bucketStorage) Read(ctx context.Context, path string) (io.ReadCloser, 
         return nil, err
     }
 
-    dr, err := bs.security.NewReader(br)
+    dr, err := stream.NewReader(br, bs.keyProvider)
     if err != nil {
         br.Close()
         return nil, err

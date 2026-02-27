@@ -1,4 +1,4 @@
-package cryptfs
+package stream
 
 import (
 	"testing"
