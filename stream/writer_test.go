@@ -106,31 +106,6 @@ func TestWriterRoundTrip(t *testing.T) {
 	})
 }
 
-func TestWriterWrongKey(t *testing.T) {
-	key := []byte("1234567890123456")
-	original := []byte("secret data")
-
-	buf := writeTestData(t, key, original, false, 0)
-
-	// Try to read with wrong key
-	wrongKey := []byte("6543210987654321")
-	kp := NewStaticKeyProvider(wrongKey)
-
-	r := bytes.NewReader(buf.Bytes())
-	_, aad, err := readHeader(r)
-	require.NoError(t, err)
-
-	dk, err := kp.GenerateKey()
-	require.NoError(t, err)
-
-	_, err = newReader(r, dk.Plaintext, aad, false)
-	require.NoError(t, err) // reader creation succeeds
-
-	_, err = io.ReadAll(r)
-	// Reading will eventually fail because the test reader doesn't use the chunk reader
-	// The real test for wrong-key is in reader_test.go
-}
-
 func TestNewWriterRoundTrip(t *testing.T) {
 	key := []byte("1234567890123456")
 	kp := NewStaticKeyProvider(key)
