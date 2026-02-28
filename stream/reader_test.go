@@ -149,6 +149,71 @@ func TestReaderCorruptionDetection(t *testing.T) {
 	})
 }
 
+func TestReaderUseAfterClose(t *testing.T) {
+	key := []byte("1234567890123456")
+	kp := NewStaticKeyProvider(key)
+
+	t.Run("Read after Close returns ErrClosed", func(t *testing.T) {
+		original := []byte("hello, world")
+		var buf bytes.Buffer
+		w, err := NewWriter(&buf, kp)
+		require.NoError(t, err)
+		_, err = w.Write(original)
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		r, err := NewReader(bytes.NewReader(buf.Bytes()), kp)
+		require.NoError(t, err)
+		require.NoError(t, r.Close())
+
+		_, err = r.Read(make([]byte, 10))
+		require.ErrorIs(t, err, ErrClosed)
+	})
+
+	t.Run("double Close returns ErrClosed", func(t *testing.T) {
+		original := []byte("hello, world")
+		var buf bytes.Buffer
+		w, err := NewWriter(&buf, kp)
+		require.NoError(t, err)
+		_, err = w.Write(original)
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		r, err := NewReader(bytes.NewReader(buf.Bytes()), kp)
+		require.NoError(t, err)
+		require.NoError(t, r.Close())
+		require.ErrorIs(t, r.Close(), ErrClosed)
+	})
+
+	t.Run("sticky error after read failure", func(t *testing.T) {
+		key := []byte("1234567890123456")
+		original := []byte("data for sticky error test")
+
+		buf := writeTestData(t, key, original, false, 0)
+		data := buf.Bytes()
+
+		// Tamper with ciphertext to cause a decryption failure
+		chunkStart := fixedHeaderSize + 4 + nonceSize
+		data[chunkStart] ^= 0xFF
+
+		r := bytes.NewReader(data)
+		_, aad, err := readHeader(r)
+		require.NoError(t, err)
+
+		dr, err := newReader(r, key, aad, false)
+		require.NoError(t, err)
+
+		// First read fails with decryption error
+		_, firstErr := dr.Read(make([]byte, 256))
+		require.Error(t, firstErr)
+		require.Contains(t, firstErr.Error(), "decrypting chunk")
+
+		// Second read returns the same sticky error
+		_, secondErr := dr.Read(make([]byte, 256))
+		require.Equal(t, firstErr, secondErr)
+	})
+}
+
 func TestReaderSmallReads(t *testing.T) {
 	key := []byte("1234567890123456")
 	original := []byte("The quick brown fox jumps over the lazy dog")

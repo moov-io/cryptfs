@@ -105,6 +105,8 @@ func (cw *chunkWriter) Close() error {
 type Writer struct {
 	chunks     *chunkWriter
 	gzipWriter *gzip.Writer // nil if no compression
+	closed     bool
+	err        error // sticky error from first write failure
 }
 
 // NewWriter returns a streaming encryption writer. Data written to the returned
@@ -179,15 +181,32 @@ func newWriter(dst io.Writer, key []byte, h *fileHeader, compress bool, chunkSiz
 }
 
 func (w *Writer) Write(p []byte) (int, error) {
-	if w.gzipWriter != nil {
-		return w.gzipWriter.Write(p)
+	if w.closed {
+		return 0, ErrClosed
 	}
-	return w.chunks.Write(p)
+	if w.err != nil {
+		return 0, w.err
+	}
+	var n int
+	var err error
+	if w.gzipWriter != nil {
+		n, err = w.gzipWriter.Write(p)
+	} else {
+		n, err = w.chunks.Write(p)
+	}
+	if err != nil {
+		w.err = err
+	}
+	return n, err
 }
 
 // Close flushes all buffered data and writes the end marker.
 // The caller is responsible for closing the underlying io.Writer.
 func (w *Writer) Close() error {
+	if w.closed {
+		return ErrClosed
+	}
+	w.closed = true
 	if w.gzipWriter != nil {
 		if err := w.gzipWriter.Close(); err != nil {
 			return fmt.Errorf("closing gzip writer: %w", err)

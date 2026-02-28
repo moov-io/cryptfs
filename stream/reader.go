@@ -109,6 +109,8 @@ type Reader struct {
 	chunks     *chunkReader
 	gzipReader *gzip.Reader // nil if no compression
 	closer     io.Closer    // underlying source to close
+	closed     bool
+	err        error // sticky error from first read failure
 }
 
 // NewReader returns a streaming decryption reader. It reads the CRFS header,
@@ -185,14 +187,31 @@ func newReader(src io.Reader, key []byte, headerAAD []byte, compress bool) (*Rea
 }
 
 func (r *Reader) Read(p []byte) (int, error) {
-	if r.gzipReader != nil {
-		return r.gzipReader.Read(p)
+	if r.closed {
+		return 0, ErrClosed
 	}
-	return r.chunks.Read(p)
+	if r.err != nil {
+		return 0, r.err
+	}
+	var n int
+	var err error
+	if r.gzipReader != nil {
+		n, err = r.gzipReader.Read(p)
+	} else {
+		n, err = r.chunks.Read(p)
+	}
+	if err != nil && err != io.EOF {
+		r.err = err
+	}
+	return n, err
 }
 
 // Close closes the reader and the underlying source (if it implements io.Closer).
 func (r *Reader) Close() error {
+	if r.closed {
+		return ErrClosed
+	}
+	r.closed = true
 	var errs []error
 	if r.gzipReader != nil {
 		if err := r.gzipReader.Close(); err != nil {

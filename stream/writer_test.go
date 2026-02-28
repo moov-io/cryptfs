@@ -3,6 +3,7 @@ package stream
 import (
 	"bytes"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"testing"
 
@@ -165,6 +166,57 @@ func TestNewWriterRoundTrip(t *testing.T) {
 	})
 }
 
+func TestWriterUseAfterClose(t *testing.T) {
+	key := []byte("1234567890123456")
+	kp := NewStaticKeyProvider(key)
+
+	t.Run("Write after Close returns ErrClosed", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := NewWriter(&buf, kp)
+		require.NoError(t, err)
+
+		_, err = w.Write([]byte("hello"))
+		require.NoError(t, err)
+		require.NoError(t, w.Close())
+
+		_, err = w.Write([]byte("world"))
+		require.ErrorIs(t, err, ErrClosed)
+	})
+
+	t.Run("double Close returns ErrClosed", func(t *testing.T) {
+		var buf bytes.Buffer
+		w, err := NewWriter(&buf, kp)
+		require.NoError(t, err)
+
+		require.NoError(t, w.Close())
+		require.ErrorIs(t, w.Close(), ErrClosed)
+	})
+
+	t.Run("sticky error after write failure", func(t *testing.T) {
+		fw := &failWriter{failAfter: 1} // fail on the second Write call (chunk data)
+		var prefix [noncePrefixSize]byte
+		_, err := rand.Read(prefix[:])
+		require.NoError(t, err)
+
+		h := &fileHeader{
+			Version:     formatVersion,
+			NoncePrefix: prefix,
+		}
+		// Use a tiny chunk size so a single Write triggers a flush to dst
+		w, err := newWriter(fw, key, h, false, 4)
+		require.NoError(t, err)
+
+		// Write enough to fill a chunk and trigger a flush, which writes
+		// the 4-byte length (succeeds) then the chunk data (fails).
+		_, firstErr := w.Write([]byte("abcdefgh"))
+		require.Error(t, firstErr)
+
+		// Subsequent write returns the same sticky error
+		_, secondErr := w.Write([]byte("more"))
+		require.Equal(t, firstErr, secondErr)
+	})
+}
+
 func writeTestData(t *testing.T, key, data []byte, compress bool, chunkSize int) *bytes.Buffer {
 	t.Helper()
 
@@ -197,6 +249,20 @@ func writeTestData(t *testing.T, key, data []byte, compress bool, chunkSize int)
 	require.NoError(t, w.Close())
 
 	return &buf
+}
+
+// failWriter is an io.Writer that returns an error after a set number of calls.
+type failWriter struct {
+	failAfter int // number of successful Write calls before failing
+	calls     int
+}
+
+func (fw *failWriter) Write(p []byte) (int, error) {
+	if fw.calls >= fw.failAfter {
+		return 0, fmt.Errorf("simulated write error")
+	}
+	fw.calls++
+	return len(p), nil
 }
 
 func readTestData(t *testing.T, key, data []byte) []byte {
