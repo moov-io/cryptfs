@@ -19,9 +19,8 @@ func TestStaticKeyProvider(t *testing.T) {
 	})
 
 	t.Run("UnwrapKey ignores input", func(t *testing.T) {
-		got, err := kp.UnwrapKey([]byte("anything"))
-		require.NoError(t, err)
-		require.Equal(t, key, got)
+		_, err := kp.UnwrapKey([]byte("anything"))
+		require.Error(t, err)
 	})
 
 	t.Run("key is copied", func(t *testing.T) {
