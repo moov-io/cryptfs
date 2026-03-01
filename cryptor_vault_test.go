@@ -18,11 +18,15 @@
 package cryptfs
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/moov-io/cryptfs/stream"
 
 	"github.com/stretchr/testify/require"
 )
@@ -71,6 +75,48 @@ func TestVaultCryptor(t *testing.T) {
 
 		testCryptFS(t, fsys)
 	})
+}
+
+func TestVaultDataKey(t *testing.T) {
+	shouldSkipDockerTest(t)
+
+	conf := VaultConfig{
+		Address: "http://localhost:8200",
+		Token:   &TokenConfig{Token: "myroot"},
+		KeyName: "testkey",
+	}
+
+	kp, err := NewVaultKeyProvider(conf)
+	require.NoError(t, err)
+
+	// Generate a data key
+	dk, err := kp.GenerateKey()
+	require.NoError(t, err)
+	require.Len(t, dk.Plaintext, 32, "Vault default data key is 256-bit")
+	require.NotEmpty(t, dk.WrappedKey, "wrapped key should be non-empty")
+
+	// Unwrap it back
+	recovered, err := kp.UnwrapKey(dk.WrappedKey)
+	require.NoError(t, err)
+	require.Equal(t, dk.Plaintext, recovered, "unwrapped key must match original")
+
+	// Full streaming round-trip with Vault envelope encryption
+	original := []byte("sensitive data for vault envelope test")
+
+	var buf bytes.Buffer
+	w, err := stream.NewWriter(&buf, kp, stream.WithCompression())
+	require.NoError(t, err)
+	_, err = w.Write(original)
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	r, err := stream.NewReader(bytes.NewReader(buf.Bytes()), kp)
+	require.NoError(t, err)
+	got, err := io.ReadAll(r)
+	require.NoError(t, err)
+	require.NoError(t, r.Close())
+
+	require.Equal(t, original, got)
 }
 
 func shouldSkipDockerTest(t *testing.T) {
