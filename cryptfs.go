@@ -84,7 +84,7 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 	return fd, nil
 }
 
-// Reveal will decode and then decrypt the bytes its given
+// Reveal will decode and then decrypt the bytes its given.
 func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
 	bs, err := fsys.coder.decode(encodedBytes)
 	if err != nil {
