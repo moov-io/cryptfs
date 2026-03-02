@@ -1,4 +1,4 @@
-name: Go
+name: Non-CGo
 
 on:
   push:
@@ -35,7 +35,3 @@ jobs:
       run: make check
       env:
         CGO_ENABLED: "0"
-
-    - name: Upload Code Coverage
-      if: runner.os == 'Linux'
-      run: bash <(curl -s https://codecov.io/bash)

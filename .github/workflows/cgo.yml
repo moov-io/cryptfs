@@ -1,4 +1,4 @@
-name: Go
+name: CGO
 
 on:
   push:
@@ -33,6 +33,8 @@ jobs:
 
     - name: Check
       run: make check
+      env:
+        CGO_ENABLED: "0"
 
     - name: Teardown
       if: runner.os == 'Linux'
