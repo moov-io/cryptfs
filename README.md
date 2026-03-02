@@ -65,7 +65,7 @@ fsys.SetCoder(cryptfs.Base64()) // optional, default is the raw bytes
 ```go
 fsys, err := cryptfs.FromCryptor(cryptfs.NewGPGCryptorFile(publicKeyPath, privateKeyPath, password))
 if err != nil {
-    // do something
+    // handle error
 }
 
 fsys.SetCoder(cryptfs.Base64()) // optional, default is the raw bytes
@@ -79,7 +79,7 @@ Once initialized you can perform open/read and write operations.
 ```go
 file, err := fsys.Open(path)
 if err != nil {
-    // do something
+    // handle error
 }
 ```
 
@@ -87,7 +87,7 @@ if err != nil {
 ```go
 plaintext, err := fsys.ReadFile(path)
 if err != nil {
-    // do something
+    // handle error
 }
 ```
 
@@ -95,7 +95,7 @@ if err != nil {
 ```go
 err := fsys.WriteFile(path, data, 0600)
 if err != nil {
-    // do something
+    // handle error
 }
 ```
 
@@ -118,18 +118,27 @@ kp := stream.NewStaticKeyProvider(key)
 var buf bytes.Buffer
 w, err := stream.NewWriter(&buf, kp, stream.WithCompression()) // compression is optional
 if err != nil {
-    // do something
+    // handle error
 }
-io.Copy(w, sourceReader)
-w.Close()
+if _, err := io.Copy(w, sourceReader); err != nil {
+    // handle error
+}
+if err := w.Close(); err != nil {
+    // handle error
+}
 
 // Decrypt
 r, err := stream.NewReader(bytes.NewReader(buf.Bytes()), kp)
 if err != nil {
-    // do something
+    // handle error
 }
-plaintext, _ := io.ReadAll(r)
-r.Close()
+plaintext, err := io.ReadAll(r)
+if err != nil {
+    // handle error
+}
+if err := r.Close(); err != nil {
+    // handle error
+}
 ```
 
 </details>
@@ -148,24 +157,33 @@ import (
 // Set up Vault key provider
 kp, err := cryptfs.NewVaultKeyProvider(vaultConf)
 if err != nil {
-    // do something
+    // handle error
 }
 
 // Write — generates a Vault data key, encrypts locally
 w, err := stream.NewWriter(destination, kp)
 if err != nil {
-    // do something
+    // handle error
 }
-io.Copy(w, sourceReader)
-w.Close()
+if _, err := io.Copy(w, sourceReader); err != nil {
+    // handle error
+}
+if err := w.Close(); err != nil {
+    // handle error
+}
 
 // Read — unwraps the data key via Vault, decrypts locally
 r, err := stream.NewReader(source, kp)
 if err != nil {
-    // do something
+    // handle error
 }
-plaintext, _ := io.ReadAll(r)
-r.Close()
+plaintext, err := io.ReadAll(r)
+if err != nil {
+    // handle error
+}
+if err := r.Close(); err != nil {
+    // handle error
+}
 ```
 
 </details>
@@ -174,21 +192,29 @@ r.Close()
 <summary>Streaming write to a cloud bucket</summary>
 
 ```go
-func (bs *bucketStorage) Save(ctx context.Context, path string, file fs.File) error {
+func (bs *bucketStorage) Save(ctx context.Context, path string, file fs.File) (retErr error) {
     bw, err := bs.bucket.NewWriter(ctx, path, nil)
     if err != nil {
         return err
     }
-    defer bw.Close()
+    defer func() {
+        if err := bw.Close(); retErr == nil {
+            retErr = err
+        }
+    }()
 
     ew, err := stream.NewWriter(bw, bs.keyProvider)
     if err != nil {
         return err
     }
-    if _, err := io.Copy(ew, file); err != nil {
-        return err
-    }
-    return ew.Close()
+    defer func() {
+        if err := ew.Close(); retErr == nil {
+            retErr = err
+        }
+    }()
+
+    _, err = io.Copy(ew, file)
+    return err
 }
 ```
 
