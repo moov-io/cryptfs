@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.26.1
 
 require (
-	github.com/ProtonMail/go-crypto v1.4.0
+	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v3 v3.0.1
