@@ -3,6 +3,8 @@ name: Non-CGo
 on:
   push:
     branches: [ master ]
+    paths-ignore:
+      - "docs/bench/**"
   pull_request:
     branches: [ master ]
 
