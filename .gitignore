@@ -30,3 +30,5 @@ coverage.txt
 *.pyc
 
 .idea/*
+
+output.txt

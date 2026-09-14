@@ -25,3 +25,7 @@ cover-test:
 	go test -coverprofile=cover.out ./...
 cover-web:
 	go tool cover -html=cover.out
+
+.PHONY: bench
+bench:
+	go test ./... -count=1 -run '^$$' -bench '^Benchmark' -benchmem | tee output.txt
