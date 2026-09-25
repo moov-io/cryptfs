@@ -72,7 +72,7 @@ func VerifySignature(signedData []byte, publicKeys openpgp.EntityList, expectedF
 		return nil, err
 	}
 
-	if signer.SignedBy == nil || signer.SignatureError != nil {
+	if signer.SignedBy == nil {
 		return nil, errors.New("signature verification failed")
 	}
 
@@ -83,6 +83,9 @@ func VerifySignature(signedData []byte, publicKeys openpgp.EntityList, expectedF
 	cleartext, err := io.ReadAll(signer.UnverifiedBody)
 	if err != nil {
 		return nil, err
+	}
+	if signer.SignatureError != nil {
+		return nil, errors.New("signature verification failed")
 	}
 
 	return cleartext, nil
