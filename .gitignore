@@ -32,3 +32,5 @@ coverage.txt
 .idea/*
 
 output.txt
+output.raw.txt
+
