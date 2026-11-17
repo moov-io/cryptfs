@@ -15,6 +15,8 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+
+	"github.com/moov-io/cryptfs/internal/memzero"
 )
 
 // ReadArmoredKey attempts to read the filepath and parses an armored GPG key
@@ -57,18 +59,21 @@ func decryptPrivateKey(entityList openpgp.EntityList, password []byte) (openpgp.
 		return nil, errors.New("gpg: no entities found")
 	}
 
+	// Copy so we can clear our buffer without touching a caller-owned slice.
+	pass := memzero.Clone(password)
+	defer memzero.Bytes(pass)
+
 	entity := entityList[0]
 
-	// Get the passphrase and read the private key.
-	if entity.PrivateKey != nil && len(password) > 0 {
-		err := entity.PrivateKey.Decrypt(password)
+	if entity.PrivateKey != nil && len(pass) > 0 {
+		err := entity.PrivateKey.Decrypt(pass)
 		if err != nil {
 			return nil, fmt.Errorf("decrypting private key failed: %w", err)
 		}
 	}
 	for idx, subkey := range entity.Subkeys {
-		if subkey.PrivateKey != nil && len(password) > 0 {
-			err := subkey.PrivateKey.Decrypt(password)
+		if subkey.PrivateKey != nil && len(pass) > 0 {
+			err := subkey.PrivateKey.Decrypt(pass)
 			if err != nil {
 				return nil, fmt.Errorf("decrypting subkey %d failed: %w", idx, err)
 			}

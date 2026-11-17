@@ -17,6 +17,8 @@
 
 package cryptfs
 
+import "github.com/moov-io/cryptfs/internal/memzero"
+
 type Compressor interface {
 	compress(data []byte) ([]byte, error)
 	decompress(data []byte) ([]byte, error)
@@ -29,9 +31,9 @@ func NoCompression() Compressor {
 type nothingCompressor struct{}
 
 func (*nothingCompressor) compress(data []byte) ([]byte, error) {
-	return data, nil
+	return memzero.Clone(data), nil
 }
 
 func (*nothingCompressor) decompress(data []byte) ([]byte, error) {
-	return data, nil
+	return memzero.Clone(data), nil
 }

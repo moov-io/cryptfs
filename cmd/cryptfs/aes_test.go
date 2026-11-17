@@ -3,12 +3,32 @@ package main
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func TestOpenAESCryptorDoesNotPrintKey(t *testing.T) {
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	old := os.Stdout
+	os.Stdout = w
+
+	validKey := strings.Repeat("1", 16)
+	cc, err := openAESCryptor(validKey)
+	require.NoError(t, w.Close())
+	os.Stdout = old
+	require.NoError(t, err)
+	require.NotNil(t, cc)
+
+	out, err := io.ReadAll(r)
+	require.NoError(t, err)
+	require.NotContains(t, string(out), validKey)
+	require.NotContains(t, string(out), "data:")
+}
 
 func TestAESCryptor(t *testing.T) {
 	validKey := strings.Repeat("1", 16)

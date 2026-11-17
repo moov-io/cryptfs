@@ -100,7 +100,7 @@ func (vc *vaultClient) Healthy() error {
 
 	_, err := vc.client.Sys().Health()
 	if err != nil {
-		return fmt.Errorf("checking Vault health: %v", err)
+		return fmt.Errorf("checking Vault health: %w", err)
 	}
 
 	return nil
@@ -127,7 +127,7 @@ func (v *VaultCryptor) encrypt(plaintext []byte) ([]byte, error) {
 	params := map[string]interface{}{"plaintext": base64.StdEncoding.EncodeToString(plaintext)}
 	res, err := v.client.Logical().Write(fmt.Sprintf("/transit/encrypt/%s", v.config.KeyName), params)
 	if err != nil {
-		return nil, fmt.Errorf("encrypting data: %v", err)
+		return nil, fmt.Errorf("encrypting data: %w", err)
 	}
 
 	data := res.Data["ciphertext"]
@@ -146,7 +146,7 @@ func (v *VaultCryptor) decrypt(ciphertext []byte) ([]byte, error) {
 	params := map[string]interface{}{"ciphertext": string(ciphertext)}
 	res, err := v.client.Logical().Write(fmt.Sprintf("/transit/decrypt/%s", v.config.KeyName), params)
 	if err != nil {
-		return nil, fmt.Errorf("decrypting data: %v", err)
+		return nil, fmt.Errorf("decrypting data: %w", err)
 	}
 
 	data := res.Data["plaintext"]
@@ -157,7 +157,7 @@ func (v *VaultCryptor) decrypt(ciphertext []byte) ([]byte, error) {
 
 	plaintext, err := base64.StdEncoding.DecodeString(base64Plaintext)
 	if err != nil {
-		return nil, fmt.Errorf("decoding plaintext: %v", err)
+		return nil, fmt.Errorf("decoding plaintext: %w", err)
 	}
 	return plaintext, nil
 }

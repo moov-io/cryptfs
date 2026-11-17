@@ -2,6 +2,8 @@ package stream
 
 import (
 	"errors"
+
+	"github.com/moov-io/cryptfs/internal/memzero"
 )
 
 // DataKey holds a plaintext AES key and its wrapped (encrypted) form.
@@ -30,12 +32,12 @@ type staticKeyProvider struct {
 }
 
 func (p *staticKeyProvider) GenerateKey() (*DataKey, error) {
-	return &DataKey{Plaintext: p.key}, nil
+	return &DataKey{Plaintext: memzero.Clone(p.key)}, nil
 }
 
 func (p *staticKeyProvider) UnwrapKey(wrappedKey []byte) ([]byte, error) {
 	if len(wrappedKey) > 0 {
 		return nil, errors.New("static key provider cannot unwrap keys")
 	}
-	return p.key, nil
+	return memzero.Clone(p.key), nil
 }

@@ -36,6 +36,9 @@ func TestGzip(t *testing.T) {
 		decompressed, err := gz.decompress(plain)
 		require.NoError(t, err)
 		require.Equal(t, plain, decompressed)
+		plain[0] = 'H'
+		require.Equal(t, byte('h'), decompressed[0])
+		plain[0] = 'h'
 	})
 
 	t.Run("compressed can be decompressed", func(t *testing.T) {

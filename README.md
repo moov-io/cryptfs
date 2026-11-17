@@ -76,6 +76,9 @@ fsys.SetCoder(cryptfs.Base64()) // optional, default is the raw bytes
 Once initialized you can perform open/read and write operations.
 
 **Open**
+
+`Open` returns the file as stored on disk. It does not decrypt. Use `ReadFile` or `Reveal` for plaintext.
+
 ```go
 file, err := fsys.Open(path)
 if err != nil {

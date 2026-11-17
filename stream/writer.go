@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/moov-io/cryptfs/internal/memzero"
 )
 
 // chunkWriter buffers plaintext and encrypts full chunks with AES-GCM.
@@ -82,6 +84,7 @@ func (cw *chunkWriter) flushChunk() error {
 		return fmt.Errorf("writing chunk data: %w", err)
 	}
 
+	memzero.Bytes(cw.buf[:cap(cw.buf)])
 	cw.buf = cw.buf[:0]
 	cw.counter++
 	return nil
@@ -90,8 +93,11 @@ func (cw *chunkWriter) flushChunk() error {
 func (cw *chunkWriter) Close() error {
 	// Flush any remaining buffered data
 	if err := cw.flushChunk(); err != nil {
+		memzero.Bytes(cw.buf[:cap(cw.buf)])
 		return err
 	}
+
+	memzero.Bytes(cw.buf[:cap(cw.buf)])
 
 	// Write end marker (4 zero bytes)
 	var endMarker [4]byte
@@ -122,6 +128,7 @@ func NewWriter(dst io.Writer, kp KeyProvider, opts ...Option) (*Writer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("generating data key: %w", err)
 	}
+	defer memzero.Bytes(dk.Plaintext)
 
 	var prefix [noncePrefixSize]byte
 	if _, err := rand.Read(prefix[:]); err != nil {
@@ -148,7 +155,10 @@ func NewWriter(dst io.Writer, kp KeyProvider, opts ...Option) (*Writer, error) {
 }
 
 func newWriter(dst io.Writer, key []byte, h *fileHeader, compress bool, chunkSize int) (*Writer, error) {
-	block, err := aes.NewCipher(key)
+	owned := memzero.Clone(key)
+	defer memzero.Bytes(owned)
+
+	block, err := aes.NewCipher(owned)
 	if err != nil {
 		return nil, fmt.Errorf("creating AES cipher: %w", err)
 	}

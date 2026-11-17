@@ -61,6 +61,7 @@ func FromConfig(conf Config) (*FS, error) {
 			}
 		}
 		cryptor, err = NewAESCryptor(key)
+		Clear(key)
 
 	case conf.Encryption.GPG != nil:
 		if conf.Encryption.GPG.PublicPath != "" && conf.Encryption.GPG.PrivatePath == "" {
@@ -74,6 +75,7 @@ func FromConfig(conf Config) (*FS, error) {
 		if conf.Encryption.GPG.PublicPath != "" && conf.Encryption.GPG.PrivatePath != "" {
 			cryptor, err = NewGPGCryptorFile(conf.Encryption.GPG.PublicPath, conf.Encryption.GPG.PrivatePath, password)
 		}
+		Clear(password)
 
 	case conf.Encryption.Vault != nil:
 		cryptor, err = NewVaultCryptor(*conf.Encryption.Vault)
@@ -106,7 +108,9 @@ func FromConfig(conf Config) (*FS, error) {
 	}
 
 	if len(conf.HMACKey) > 0 {
-		fsys.SetHMACKey([]byte(conf.HMACKey))
+		hmacKey := []byte(conf.HMACKey)
+		fsys.SetHMACKey(hmacKey)
+		Clear(hmacKey)
 	}
 
 	return fsys, nil

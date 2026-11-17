@@ -14,7 +14,7 @@ Every file is encrypted with a unique data key. When using Vault Transit, a fres
 
 1. The library requests a new data key from Vault Transit (`/transit/datakey/plaintext/{keyName}`).
 2. Vault returns the plaintext key (used locally for AES-GCM) and a wrapped copy (ciphertext encrypted under the Vault master key).
-3. Only the **wrapped key** is stored in the file header. The plaintext key lives in process memory during encryption and is never persisted.
+3. Only the **wrapped key** is stored in the file header. The plaintext key lives in process memory until the AES cipher is constructed, then that slice is overwritten. It is never persisted.
 4. On decryption, the wrapped key is sent back to Vault Transit (`/transit/decrypt/{keyName}`) to recover the plaintext key.
 
 The master key never leaves Vault. Vault handles key rotation, access policy, and audit logging.
@@ -48,6 +48,10 @@ This design prevents nonce reuse through two independent mechanisms:
 - The **random prefix** ensures uniqueness across files encrypted with the same key.
 - The **incrementing counter** ensures uniqueness across chunks within a single file.
 - A hard limit at 2^40 chunks prevents counter wraparound. At 64 KB per chunk this allows up to 64 PB per file before the limit is reached.
+
+With `NewStaticKeyProvider` every file shares one AES key, so uniqueness rests on the 7-byte prefix. A birthday collision of prefixes on that key becomes likely around 2^28 files. Vault envelope encryption issues a fresh data key per file, so a prefix collision there does not reuse a nonce under the same key.
+
+After `aes.NewCipher` the library overwrites the plaintext data-key slice (the cipher keeps its own key schedule). `Writer.Close` and `Reader.Close` overwrite the plaintext chunk buffer, including unused capacity.
 
 ## Integrity Guarantees (AEAD)
 
