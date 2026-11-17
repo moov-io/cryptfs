@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+
+	"github.com/moov-io/cryptfs/internal/memzero"
 )
 
 type FS struct {
@@ -71,11 +73,13 @@ func (fsys *FS) SetCoder(coder Coder) {
 
 func (fsys *FS) SetHMACKey(key []byte) {
 	if fsys != nil {
-		fsys.hmacKey = key
+		fsys.hmacKey = memzero.Clone(key)
 	}
 }
 
-// Open will open a file at the given name
+// Open opens the named file on the local filesystem.
+// It does not decrypt. The returned file is the stored bytes (ciphertext if
+// the file was written with WriteFile). Use ReadFile or Reveal to decrypt.
 func (fsys *FS) Open(name string) (fs.File, error) {
 	fd, err := os.Open(name)
 	if err != nil {
@@ -86,37 +90,43 @@ func (fsys *FS) Open(name string) (fs.File, error) {
 
 // Reveal will decode and then decrypt the bytes its given.
 func (fsys *FS) Reveal(encodedBytes []byte) ([]byte, error) {
-	bs, err := fsys.coder.decode(encodedBytes)
+	decoded, err := fsys.coder.decode(encodedBytes)
 	if err != nil {
 		return nil, fmt.Errorf("decoding: %w", err)
 	}
 
-	// Verify MAC if hmacKey is set
-	if len(fsys.hmacKey) > 1 {
+	payload := decoded
+	if len(fsys.hmacKey) > 0 {
 		macSize := sha256.Size
-		if len(bs) < macSize {
+		if len(decoded) < macSize {
+			wipeIfDistinct(decoded, encodedBytes)
 			return nil, errors.New("data too short to contain valid HMAC")
 		}
 
-		receivedMAC := bs[:macSize]
-		bs = bs[macSize:]
+		receivedMAC := decoded[:macSize]
+		payload = decoded[macSize:]
 
-		expectedMAC := fsys.computeHMAC(bs)
+		expectedMAC := fsys.computeHMAC(payload)
 		if !hmac.Equal(receivedMAC, expectedMAC) {
+			wipeIfDistinct(decoded, encodedBytes)
 			return nil, errors.New("invalid MAC, data integrity could be compromised")
 		}
 	}
 
-	bs, err = fsys.cryptor.decrypt(bs)
+	plain, err := fsys.cryptor.decrypt(payload)
+	wipeIfDistinct(decoded, encodedBytes, plain)
 	if err != nil {
+		wipeIfDistinct(plain)
 		return nil, fmt.Errorf("decryption: %w", err)
 	}
 
-	bs, err = fsys.compressor.decompress(bs)
+	out, err := fsys.compressor.decompress(plain)
+	wipeIfDistinct(plain, out)
 	if err != nil {
+		wipeIfDistinct(out)
 		return nil, fmt.Errorf("decompression: %w", err)
 	}
-	return bs, nil
+	return out, nil
 }
 
 // ReadFile will attempt to open, decode, and decrypt a file.
@@ -134,28 +144,35 @@ func (fsys *FS) ReadFile(name string) ([]byte, error) {
 
 // Disfigure will encrypt and encode the plaintext
 func (fsys *FS) Disfigure(plaintext []byte) ([]byte, error) {
-	bs, err := fsys.compressor.compress(plaintext)
+	compressed, err := fsys.compressor.compress(plaintext)
 	if err != nil {
 		return nil, fmt.Errorf("compression: %w", err)
 	}
 
-	bs, err = fsys.cryptor.encrypt(bs)
+	encrypted, err := fsys.cryptor.encrypt(compressed)
+	wipeIfDistinct(compressed, plaintext, encrypted)
 	if err != nil {
+		wipeIfDistinct(encrypted, plaintext)
 		return nil, fmt.Errorf("encryption: %w", err)
 	}
 
-	// Prepend the MAC to the encrypted data
-	if len(fsys.hmacKey) > 1 {
-		mac := fsys.computeHMAC(bs)
-		bs = append(mac, bs...)
+	payload := encrypted
+	if len(fsys.hmacKey) > 0 {
+		mac := fsys.computeHMAC(encrypted)
+		payload = append(mac, encrypted...)
 	}
 
-	bs, err = fsys.coder.encode(bs)
+	encoded, err := fsys.coder.encode(payload)
+	if len(fsys.hmacKey) > 0 {
+		wipeIfDistinct(payload, encoded, encrypted)
+	}
+	wipeIfDistinct(encrypted, plaintext, encoded)
 	if err != nil {
+		wipeIfDistinct(encoded, plaintext)
 		return nil, fmt.Errorf("encoding: %w", err)
 	}
 
-	return bs, nil
+	return encoded, nil
 }
 
 func (fsys *FS) computeHMAC(data []byte) []byte {

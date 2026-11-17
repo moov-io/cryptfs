@@ -31,8 +31,10 @@ func TestGPG(t *testing.T) {
 	}
 
 	// Decrypt
-	privKey, err := ReadPrivateKeyFile(privateKeyPath, password)
+	pass := append([]byte(nil), password...)
+	privKey, err := ReadPrivateKeyFile(privateKeyPath, pass)
 	require.NoError(t, err)
+	require.Equal(t, password, pass)
 	out, err := Decrypt(msg, privKey)
 	require.NoError(t, err)
 	require.Equal(t, "hello, world", string(out))

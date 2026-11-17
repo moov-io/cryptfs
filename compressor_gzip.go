@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"io"
 	"sync"
+
+	"github.com/moov-io/cryptfs/internal/memzero"
 )
 
 const (
@@ -146,9 +148,9 @@ func (g *gzipCompressor) decompress(data []byte) ([]byte, error) {
 			return nil, fmt.Errorf("gzip strict reset: %w", err)
 		}
 		if err == gzip.ErrHeader {
-			// Match original behavior: return input data directly (no copy)
-			// for non-gzipped content in non-strict mode.
-			return data, nil
+			// Non-gzipped content in non-strict mode: return a copy so the
+			// caller can clear the input without changing the result.
+			return memzero.Clone(data), nil
 		}
 		return nil, fmt.Errorf("gzip reset: %w", err)
 	}

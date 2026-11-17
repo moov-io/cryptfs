@@ -153,16 +153,12 @@ func (c *GPGCryptor) decrypt(data []byte) ([]byte, error) {
 		}
 
 		if signer.SignedBy != nil {
-			var expectedFingerprint [20]byte
-			copy(expectedFingerprint[:], c.publicKeys[0].PrimaryKey.Fingerprint[:])
-
-			// Verify the signature and extract the original cleartext message
 			cleartext, err := io.ReadAll(signer.UnverifiedBody)
 			if err != nil {
 				return nil, fmt.Errorf("gpg: failed to read signed message body: %w", err)
 			}
 
-			if !bytes.Equal(signer.SignedBy.PublicKey.Fingerprint[:], expectedFingerprint[:]) {
+			if !signedByKnownKey(c.publicKeys, signer.SignedBy) {
 				return nil, errors.New("gpg: signature verification failed: public key fingerprint does not match the expected fingerprint")
 			}
 
@@ -178,6 +174,22 @@ func (c *GPGCryptor) decrypt(data []byte) ([]byte, error) {
 	}
 
 	return decryptedData, nil
+}
+
+func signedByKnownKey(keys openpgp.EntityList, signedBy *openpgp.Key) bool {
+	if signedBy == nil || signedBy.PublicKey == nil {
+		return false
+	}
+	fp := signedBy.PublicKey.Fingerprint
+	for _, e := range keys {
+		if e == nil || e.PrimaryKey == nil {
+			continue
+		}
+		if bytes.Equal(e.PrimaryKey.Fingerprint, fp) {
+			return true
+		}
+	}
+	return false
 }
 
 var _ Cryptor = (&GPGCryptor{})

@@ -139,7 +139,6 @@ func openAESCryptor(pathOrValue string) (*cryptfs.AESCryptor, error) {
 	if err != nil {
 		return nil, fmt.Errorf("AES key decode: %v", err)
 	}
-	fmt.Printf("data: %q\n", data)
 
 	// Optionally decode base64 data
 	if strings.HasPrefix(data, base64EncodedPrefix) {
@@ -149,10 +148,15 @@ func openAESCryptor(pathOrValue string) (*cryptfs.AESCryptor, error) {
 		if err != nil {
 			return nil, fmt.Errorf("decoding AES key: %v", err)
 		}
-		return cryptfs.NewAESCryptor(key)
+		cc, err := cryptfs.NewAESCryptor(key)
+		cryptfs.Clear(key)
+		return cc, err
 	}
 
-	return cryptfs.NewAESCryptor([]byte(data))
+	key := []byte(data)
+	cc, err := cryptfs.NewAESCryptor(key)
+	cryptfs.Clear(key)
+	return cc, err
 }
 
 // readFile will return the contents of pathOrValue on the local filesystem

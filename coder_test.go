@@ -30,10 +30,15 @@ func TestCoder__Nothing(t *testing.T) {
 	encoded, err := cc.encode(data)
 	require.NoError(t, err)
 	require.Equal(t, data, encoded)
+	data[0] = 'H'
+	require.Equal(t, byte('h'), encoded[0])
 
+	data = []byte("hello, world")
 	plain, err := cc.decode(encoded)
 	require.NoError(t, err)
 	require.Equal(t, data, plain)
+	encoded[0] = 'X'
+	require.Equal(t, byte('h'), plain[0])
 }
 
 func TestCoder__Base64(t *testing.T) {

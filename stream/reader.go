@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/moov-io/cryptfs/internal/memzero"
 )
 
 // chunkReader reads and decrypts chunks from the underlying reader.
@@ -139,13 +141,17 @@ func NewReader(src io.Reader, kp KeyProvider) (*Reader, error) {
 	if key == nil {
 		return nil, fmt.Errorf("no key provided")
 	}
+	defer memzero.Bytes(key)
 
 	compress := h.Flags&flagGzip != 0
 	return newReader(src, key, aad, compress)
 }
 
 func newReader(src io.Reader, key []byte, headerAAD []byte, compress bool) (*Reader, error) {
-	block, err := aes.NewCipher(key)
+	owned := memzero.Clone(key)
+	defer memzero.Bytes(owned)
+
+	block, err := aes.NewCipher(owned)
 	if err != nil {
 		return nil, fmt.Errorf("creating AES cipher: %w", err)
 	}
@@ -212,6 +218,10 @@ func (r *Reader) Close() error {
 		return ErrClosed
 	}
 	r.closed = true
+	if r.chunks != nil {
+		memzero.Bytes(r.chunks.buf[:cap(r.chunks.buf)])
+		r.chunks.buf = nil
+	}
 	var errs []error
 	if r.gzipReader != nil {
 		if err := r.gzipReader.Close(); err != nil {

@@ -20,6 +20,8 @@ package cryptfs
 import (
 	"encoding/base64"
 	"fmt"
+
+	"github.com/moov-io/cryptfs/internal/memzero"
 )
 
 // Coder is an interface describing two operations which transform data into
@@ -37,11 +39,11 @@ func NoEncoding() Coder {
 type nothingCoder struct{}
 
 func (*nothingCoder) encode(data []byte) ([]byte, error) {
-	return data, nil
+	return memzero.Clone(data), nil
 }
 
 func (*nothingCoder) decode(data []byte) ([]byte, error) {
-	return data, nil
+	return memzero.Clone(data), nil
 }
 
 // Base64 is a Coder which transforms data following RFC 4648 section 3.2.
