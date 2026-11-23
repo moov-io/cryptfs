@@ -19,6 +19,7 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -41,7 +42,7 @@ var (
 	// Cryptor flags
 	flagAES = flag.String("aes", os.Getenv("AES_KEY"), strings.TrimSpace(`
 Configure AES encryption with the specified key. Can also be a filepath.
-Prefix value with 'base64:' to decode key.
+Prefix value with 'base64:' to decode key. Defaults to the AES_KEY environment variable.
 `))
 )
 
@@ -116,6 +117,8 @@ func setupCryptfs() (*cryptfs.FS, error) {
 	switch {
 	case *flagAES != "":
 		cc, err = openAESCryptor(*flagAES)
+	default:
+		return nil, errors.New("no key specified, use -aes or set the AES_KEY environment variable")
 	}
 	if err != nil {
 		return nil, err

@@ -52,8 +52,12 @@ type vaultClient struct {
 }
 
 func newVaultClient(conf VaultConfig) (*vaultClient, error) {
+	// api.DefaultConfig reads VAULT_ADDR (and other VAULT_* variables) from the environment.
+	// Use conf.Address only when it is set, so that VAULT_ADDR is used as a fallback.
 	vaultConf := api.DefaultConfig()
-	vaultConf.Address = conf.Address
+	if conf.Address != "" {
+		vaultConf.Address = conf.Address
+	}
 	vaultConf.HttpClient = &http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -90,7 +94,11 @@ func (vc *vaultClient) auth() error {
 		vc.client.SetToken(vc.config.Token.Token)
 		return nil
 	}
-	return errors.New("must specified a auth configuration")
+	// api.NewClient reads VAULT_TOKEN from the environment.
+	if vc.client.Token() != "" {
+		return nil
+	}
+	return errors.New("must specify an auth configuration (token or kubernetes) or set VAULT_TOKEN")
 }
 
 func (vc *vaultClient) Healthy() error {

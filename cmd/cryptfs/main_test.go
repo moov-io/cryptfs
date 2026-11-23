@@ -44,3 +44,12 @@ func TestCryptfsErr(t *testing.T) {
 	_, err = encrypt(fs, "/does/not/exist")
 	require.Error(t, err)
 }
+
+func TestSetupCryptfs_NoKey(t *testing.T) {
+	prev := *flagAES
+	t.Cleanup(func() { *flagAES = prev })
+	*flagAES = ""
+
+	_, err := setupCryptfs()
+	require.ErrorContains(t, err, "no key specified")
+}
