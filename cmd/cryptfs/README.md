@@ -2,10 +2,12 @@
 
 `cryptfs` offers a command line utility for encrypting / decrypting files.
 
+The command line tool supports AES encryption and Base64 encoding only. It does not support GPG, Vault, gzip compression, HMAC or the streaming (CRFS) format.
+
 ### Install
 
 ```
-go get github.com/moov-io/cryptfs/cmd/cryptfs
+go install github.com/moov-io/cryptfs/cmd/cryptfs@latest
 ```
 
 ### Usage
@@ -26,6 +28,13 @@ Usage of cryptfs:
     	Optional filepath to write final contents into
   -verbose
     	Enable verbose logging
+```
+
+The AES key must be 16, 24 or 32 bytes (AES-128, AES-192 or AES-256). Instead of `-aes`, you can set the key in the `AES_KEY` environment variable:
+
+```
+$ export AES_KEY=base64:$(openssl rand -base64 32)
+$ cryptfs -encrypt coder.go -base64 -output foo.enc
 ```
 
 #### Encryption
@@ -52,10 +61,10 @@ Twitter [@moov](https://twitter.com/moov) | You can follow Moov.io's Twitter fee
 
 ## Contributing
 
-Yes please! Please review our [Contributing guide](CONTRIBUTING.md) and [Code of Conduct](https://github.com/moov-io/ach/blob/master/CODE_OF_CONDUCT.md) to get started! Checkout our [issues for first time contributors](https://github.com/moov-io/watchman/contribute) for something to help out with.
+Yes please! Please review our [Contributing guide](https://github.com/moov-io/ach/blob/master/CONTRIBUTING.md) and [Code of Conduct](https://github.com/moov-io/ach/blob/master/CODE_OF_CONDUCT.md) to get started! Checkout our [issues for first time contributors](https://github.com/moov-io/cryptfs/contribute) for something to help out with.
 
-This project uses [Go Modules](https://go.dev/blog/using-go-modules) and Go v1.18 or newer. See [Golang's install instructions](https://golang.org/doc/install) for help setting up Go. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/ach/releases/latest) as well. We highly recommend you use a tagged release for production.
+This project uses [Go Modules](https://go.dev/blog/using-go-modules) and Go v1.26 or newer. See [Golang's install instructions](https://golang.org/doc/install) for help setting up Go. You can download the source code and we offer [tagged and released versions](https://github.com/moov-io/cryptfs/releases/latest) as well. We highly recommend you use a tagged release for production.
 
 ## License
 
-Apache License 2.0 - See [LICENSE](LICENSE) for details.
+Apache License 2.0 - See [LICENSE](../../LICENSE) for details.
