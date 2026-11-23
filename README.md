@@ -183,7 +183,7 @@ encryption:
   #   keyName: "testkey"
 encoding:
   base64: true
-hmacKey: "de57e09f-e299-4de6-94ab-cd89d894c900"
+hmacKey: "change-me-to-a-random-secret"
 ```
 
 ```go
